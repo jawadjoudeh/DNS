@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard - SecureDNS Guard</title>
+    <link rel="stylesheet" href="/assets/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="brand">🛡️ SecureDNS</div>
+            <a href="/dashboard.html" class="nav-item">Dashboard</a>
+            <a href="/threat_logs.html" class="nav-item">Threat Logs</a>
+            <a href="/profile.html" class="nav-item">API Keys</a>
+            <a href="/settings.html" class="nav-item">Settings</a>
+            <a href="/logout" class="nav-item" style="margin-top: auto; color: var(--danger);">Logout</a>
+        </aside>
+        
+        <div class="sidebar-overlay"></div>
+
+        <main class="main-content">
+            <header class="top-header">
+                <button class="hamburger-btn">☰</button>
+                <h2>Overview Dashboard</h2>
+                <div id="user-profile" style="display:flex; align-items:center; gap:10px;"></div>
+            </header>
+
+            <div class="content-area">
+                <div class="grid-kpi">
+                    <div class="card kpi-card"><h3>Total Queries</h3><div class="value skeleton" id="kpi-total">0000</div></div>
+                    <div class="card kpi-card"><h3>Threats Blocked</h3><div class="value skeleton" id="kpi-blocked" style="color: var(--danger);">000</div></div>
+                    <div class="card kpi-card"><h3>Safe Queries</h3><div class="value skeleton" id="kpi-safe" style="color: var(--success);">000</div></div>
+                    <div class="card kpi-card"><h3>Model Accuracy</h3><div class="value skeleton" id="kpi-acc">00.0%</div></div>
+                </div>
+
+                <div class="grid-2" style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
+                    <div class="card">
+                        <h3>Traffic Over Time (24h)</h3>
+                        <div style="height: 300px; margin-top: 1rem;"><canvas id="hourlyChart"></canvas></div>
+                    </div>
+                    <div class="card">
+                        <h3>Recent Alerts</h3>
+                        <div id="alerts-feed" style="margin-top: 1rem; display: flex; flex-direction: column; gap: 0.5rem;">
+                            <div class="skeleton" style="height:40px; border-radius:6px;"></div>
+                            <div class="skeleton" style="height:40px; border-radius:6px;"></div>
+                            <div class="skeleton" style="height:40px; border-radius:6px;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <script src="/assets/js/main.js"></script>
+    <script>
+        let myChart = null;
+
+        document.addEventListener("DOMContentLoaded", async () => {
+            const me = await checkAuth();
+            if (me) {
+                document.getElementById('user-profile').innerHTML = `
+                    <span style="font-size: 0.875rem;">Welcome, <strong>${me.username}</strong></span>
+                    <span class="badge blue">${me.plan.toUpperCase()}</span>
+                `;
+            }
+            initDashboardPoller();
+            fetchHourly();
+            fetchAlerts();
+            setInterval(fetchAlerts, 5000);
+            
+            // Check for new alerts to show toast
+            fetch('/api/alerts/check').then(r=>r.json()).then(d => {
+                if(d.alert) showToast("New high-confidence threats detected recently!", "warning", 5000);
+            }).catch(()=>{});
+        });
+
+        async function fetchHourly() {
+            const res = await fetch('/api/stats/hourly');
+            if (!res.ok) return;
+            const data = await res.json();
+            
+            const labels = data.map(d => new Date(d.hour).getHours() + ':00');
+            const safe = data.map(d => d.safe);
+            const blocked = data.map(d => d.blocked);
+
+            const ctx = document.getElementById('hourlyChart').getContext('2d');
+            myChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: 'Safe', data: safe, borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,0.1)', fill: true, tension: 0.4 },
+                        { label: 'Blocked', data: blocked, borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,0.1)', fill: true, tension: 0.4 }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    scales: {
+                        x: { grid: { color: '#1e293b' }, ticks: { color: '#94a3b8' } },
+                        y: { grid: { color: '#1e293b' }, ticks: { color: '#94a3b8' } }
+                    },
+                    plugins: { legend: { labels: { color: '#f8fafc' } } }
+                }
+            });
+        }
+
+        async function fetchAlerts() {
+            const res = await fetch('/api/logs/recent-alerts');
+            if (res.ok) {
+                const logs = await res.json();
+                const feed = document.getElementById('alerts-feed');
+                feed.innerHTML = '';
+                if(logs.length === 0) feed.innerHTML = '<p style="color:var(--text-secondary);font-size:0.875rem;">No recent threats.</p>';
+                logs.forEach(l => {
+                    feed.innerHTML += `
+                        <div style="background: rgba(239,68,68,0.1); border-left: 3px solid var(--danger); padding: 0.75rem; border-radius: 4px;">
+                            <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--text-secondary); margin-bottom:0.25rem;">
+                                <span>${new Date(l.timestamp).toLocaleTimeString()}</span>
+                                <span>${(l.confidence*100).toFixed(0)}% Conf.</span>
+                            </div>
+                            <div style="font-family:monospace; color:var(--danger); word-break: break-all;">${l.domain_name}</div>
+                        </div>
+                    `;
+                });
+            }
+        }
+    </script>
+</body>
+</html>

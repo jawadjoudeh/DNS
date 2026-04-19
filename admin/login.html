@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SecureDNS - Admin Panel</title>
+    <link rel="stylesheet" href="/assets/css/style.css">
+    <style>
+        body { background-color: #000; }
+        .admin-form { max-width: 400px; margin: 10rem auto; text-align: center; }
+        .admin-form .card { background-color: #111; border: 1px solid #333; }
+        .admin-form input { background-color: #000; border: 1px solid #444; color: #0f0; font-family: monospace; }
+        .admin-form .btn { background-color: #333; color: #fff; border: 1px solid #555; }
+        .admin-form .btn:hover { background-color: #444; }
+    </style>
+</head>
+<body>
+    <div class="container admin-form">
+        <div class="card">
+            <h2 style="color: #fff; margin-bottom: 0.5rem;">SecureDNS - Admin Panel</h2>
+            <p style="color: #666; margin-bottom: 2rem; font-size: 0.9rem;">Restricted Access. Authorized Personnel Only.</p>
+            <form method="POST" action="/admin/login">
+                <input type="password" name="token" placeholder="Admin Token" required>
+                <button type="submit" class="btn" style="width: 100%; margin-top: 1rem;">Access Admin Panel</button>
+                <div style="color: var(--danger); margin-top: 1rem;">{{ error }}</div>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

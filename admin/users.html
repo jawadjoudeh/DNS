@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Users - Admin</title>
+    <link rel="stylesheet" href="/assets/css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="brand">Admin Panel</div>
+        <div class="nav-links">
+            <a href="/admin/dashboard">Dashboard</a>
+            <a href="/admin/users" style="color: white;">Users</a>
+            <a href="/admin/logs">Logs</a>
+            <a href="/admin/model">ML Model</a>
+            <a href="/admin/logout">Logout</a>
+        </div>
+    </nav>
+    <div class="container">
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h3>Manage Users</h3>
+                <input type="text" id="user-search" placeholder="Search username/email..." style="width: 300px; margin: 0;">
+            </div>
+            <table id="users-table">
+                <thead><tr><th>ID</th><th>Username</th><th>Email</th><th>Plan</th><th>Queries Today</th><th>Actions</th></tr></thead>
+                <tbody id="u-body"></tbody>
+            </table>
+        </div>
+    </div>
+    <script>
+        async function loadUsers() {
+            const res = await fetch('/admin/api/users');
+            if (res.ok) {
+                const users = await res.json();
+                const tb = document.getElementById('u-body');
+                tb.innerHTML = '';
+                users.forEach(u => {
+                    tb.innerHTML += `<tr>
+                        <td>${u.user_id}</td>
+                        <td>${u.username} ${u.is_admin ? '<span class="badge red">Admin</span>' : ''}</td>
+                        <td>${u.email}</td>
+                        <td>
+                            <select onchange="updatePlan(${u.user_id}, this.value)" style="padding: 0.2rem; width: auto; margin:0;">
+                                <option value="free" ${u.plan==='free'?'selected':''}>Free</option>
+                                <option value="pro" ${u.plan==='pro'?'selected':''}>Pro</option>
+                            </select>
+                        </td>
+                        <td>${u.total_queries || 0}</td>
+                        <td>
+                            <button class="btn outline" onclick="toggleAdmin(${u.user_id}, ${!u.is_admin})" style="padding: 0.2rem 0.5rem; font-size: 0.8rem;">Toggle Admin</button>
+                            <button class="btn danger" onclick="deleteUser(${u.user_id})" style="padding: 0.2rem 0.5rem; font-size: 0.8rem;">Delete</button>
+                        </td>
+                    </tr>`;
+                });
+            }
+        }
+        async function updatePlan(id, plan) {
+            await fetch('/admin/api/update-plan', {method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({user_id:id, plan:plan})});
+        }
+        async function toggleAdmin(id, status) {
+            await fetch('/admin/api/toggle-admin', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({user_id:id, is_admin:status})});
+            loadUsers();
+        }
+        async function deleteUser(id) {
+            if(!confirm('Are you sure you want to delete this user?')) return;
+            await fetch(`/admin/api/delete-user/${id}`, {method:'DELETE'});
+            loadUsers();
+        }
+        document.addEventListener("DOMContentLoaded", loadUsers);
+    </script>
+</body>
+</html>

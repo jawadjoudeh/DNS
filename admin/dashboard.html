@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Dashboard</title>
+    <link rel="stylesheet" href="/assets/css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="brand">Admin Panel</div>
+        <div class="nav-links">
+            <a href="/admin/dashboard" style="color: white;">Dashboard</a>
+            <a href="/admin/users">Users</a>
+            <a href="/admin/logs">Logs</a>
+            <a href="/admin/model">ML Model</a>
+            <a href="/admin/logout">Logout</a>
+        </div>
+    </nav>
+    <div class="container">
+        <div class="grid" style="margin-bottom: 2rem;" id="top-stats">
+            <div class="card kpi-card"><h3>Total Users</h3><div class="value" id="ad-users">0</div></div>
+            <div class="card kpi-card"><h3>Total Queries</h3><div class="value" id="ad-queries">0</div></div>
+            <div class="card kpi-card"><h3>Threats Blocked</h3><div class="value" id="ad-blocked" style="color: var(--danger);">0</div></div>
+            <div class="card kpi-card"><h3>Accuracy</h3><div class="value" id="ad-acc">0%</div></div>
+        </div>
+        
+        <div class="card">
+            <h3>Recent Attacks Feed (All Users)</h3>
+            <table style="margin-top: 1rem;">
+                <thead><tr><th>Time</th><th>User</th><th>Domain</th><th>Attack Type</th><th>Conf</th></tr></thead>
+                <tbody id="ad-feed"></tbody>
+            </table>
+        </div>
+    </div>
+    <script>
+        async function fetchAdminData() {
+            const res = await fetch('/admin/api/overview');
+            if (res.ok) {
+                const data = await res.json();
+                document.getElementById('ad-users').textContent = data.total_users;
+                document.getElementById('ad-queries').textContent = data.total_queries;
+                document.getElementById('ad-blocked').textContent = data.total_blocked;
+                document.getElementById('ad-acc').textContent = (data.model_accuracy*100).toFixed(1)+'%';
+            }
+            const lRes = await fetch('/admin/api/all-logs');
+            if (lRes.ok) {
+                const logs = await lRes.json();
+                const tb = document.getElementById('ad-feed');
+                tb.innerHTML = '';
+                logs.filter(l => l.action_taken === 'Blocked').slice(0, 10).forEach(l => {
+                    tb.innerHTML += `<tr>
+                        <td>${new Date(l.timestamp).toLocaleTimeString()}</td>
+                        <td>${l.username || 'System'}</td>
+                        <td>${l.domain_name}</td>
+                        <td><span class="badge red">${l.attack_type || 'Unknown'}</span></td>
+                        <td>${(l.confidence*100).toFixed(1)}%</td>
+                    </tr>`;
+                });
+            }
+        }
+        setInterval(fetchAdminData, 5000);
+        fetchAdminData();
+    </script>
+</body>
+</html>

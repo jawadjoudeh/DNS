@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ML Model - Admin</title>
+    <link rel="stylesheet" href="/assets/css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="brand">Admin Panel</div>
+        <div class="nav-links">
+            <a href="/admin/dashboard">Dashboard</a>
+            <a href="/admin/users">Users</a>
+            <a href="/admin/logs">Logs</a>
+            <a href="/admin/model" style="color: white;">ML Model</a>
+            <a href="/admin/logout">Logout</a>
+        </div>
+    </nav>
+    <div class="container grid-2">
+        <div class="card">
+            <h3>Model Status</h3>
+            <div id="status-info" style="margin-top: 1rem; line-height: 2;"></div>
+            <div style="margin-top: 2rem;">
+                <button class="btn" onclick="startRetrain()">Retrain Model Now</button>
+                <div id="progress-container" style="display:none; margin-top: 1rem;">
+                    <div style="background: #334155; height: 20px; border-radius: 10px; overflow: hidden;">
+                        <div id="progress-bar" style="background: var(--accent-primary); height: 100%; width: 0%; transition: width 0.3s;"></div>
+                    </div>
+                    <div id="progress-text" style="font-size: 0.8rem; text-align: center; margin-top: 0.5rem;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        async function loadStatus() {
+            const res = await fetch('/admin/api/training-status');
+            if (res.ok) {
+                const data = await res.json();
+                
+                const info = document.getElementById('status-info');
+                info.innerHTML = `
+                    <div><strong>Accuracy:</strong> ${(data.accuracy * 100).toFixed(2)}%</div>
+                    <div><strong>Train Samples:</strong> ${data.train_samples}</div>
+                    <div><strong>Last Trained:</strong> ${data.last_trained ? new Date(data.last_trained).toLocaleString() : 'Never'}</div>
+                    <div><strong>Status:</strong> ${data.is_training ? '<span class="badge blue">Training</span>' : '<span class="badge green">Idle</span>'}</div>
+                `;
+                
+                const pCont = document.getElementById('progress-container');
+                const pBar = document.getElementById('progress-bar');
+                const pText = document.getElementById('progress-text');
+                
+                if (data.is_training) {
+                    pCont.style.display = 'block';
+                    pBar.style.width = data.progress + '%';
+                    pText.textContent = `Stage: ${data.stage} (${data.progress}%)`;
+                } else {
+                    pCont.style.display = 'none';
+                }
+            }
+        }
+        
+        async function startRetrain() {
+            await fetch('/admin/api/retrain', {method: 'POST'});
+            loadStatus();
+        }
+        
+        setInterval(loadStatus, 2000);
+        document.addEventListener("DOMContentLoaded", loadStatus);
+    </script>
+</body>
+</html>

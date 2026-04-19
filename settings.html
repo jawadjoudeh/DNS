@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Settings - SecureDNS Guard</title>
+    <link rel="stylesheet" href="/assets/css/style.css">
+    <style>
+        .slider-container { margin: 1.5rem 0; }
+        .presets { display: flex; gap: 0.5rem; margin-top: 1rem; }
+        .preset-btn { flex: 1; padding: 0.5rem; background: var(--bg-primary); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 6px; cursor: pointer; text-align: center; font-size: 0.875rem; }
+        .preset-btn:hover { border-color: var(--accent); }
+        .preset-btn.active { background: rgba(99, 102, 241, 0.2); border-color: var(--accent); color: var(--accent); }
+        .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: #fff; animation: spin 1s ease-in-out infinite; margin-right: 5px; vertical-align: middle; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="brand">🛡️ SecureDNS</div>
+            <a href="/dashboard.html" class="nav-item">Dashboard</a>
+            <a href="/threat_logs.html" class="nav-item">Threat Logs</a>
+            <a href="/profile.html" class="nav-item">API Keys</a>
+            <a href="/settings.html" class="nav-item">Settings</a>
+            <a href="/logout" class="nav-item" style="margin-top: auto; color: var(--danger);">Logout</a>
+        </aside>
+        
+        <div class="sidebar-overlay"></div>
+
+        <main class="main-content">
+            <header class="top-header">
+                <button class="hamburger-btn">☰</button>
+                <h2>Settings</h2>
+            </header>
+
+            <div class="content-area">
+                <div class="grid-2" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 1.5rem;">
+                    
+                    <div class="card" id="proxy-card" style="display:none;">
+                        <h3>DNS Proxy Status</h3>
+                        <div id="proxy-status-display" style="margin: 1.5rem 0; padding: 1rem; background: var(--bg-primary); border-radius: 8px; display: flex; align-items: center; gap: 1rem;">
+                            <div id="proxy-dot" style="width:12px; height:12px; border-radius:50%; background:var(--text-secondary);"></div>
+                            <div style="flex:1;">
+                                <strong id="proxy-state-text">Checking status...</strong>
+                                <div id="proxy-meta" style="font-size:0.875rem; color:var(--text-secondary); margin-top:0.25rem;"></div>
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:1rem;">
+                            <button id="btn-start-proxy" class="btn" style="flex:1; background:var(--success);" onclick="controlProxy('start')">▶ Start Proxy</button>
+                            <button id="btn-stop-proxy" class="btn danger" style="flex:1;" onclick="controlProxy('stop')">■ Stop Proxy</button>
+                        </div>
+                        <p style="font-size:0.8rem; color:var(--text-secondary); margin-top:1rem;">
+                            ⚠️ Requires Administrator/root privileges on the server. The proxy listens on UDP port 53.
+                        </p>
+                    </div>
+
+                    <div class="card">
+                        <h3>Detection Threshold</h3>
+                        <div class="slider-container">
+                            <input type="range" id="threshold-slider" min="50" max="99" value="85" step="1">
+                            <div style="font-weight:bold; margin-top:0.5rem; display:flex; justify-content:space-between;">
+                                <span id="threshold-val-text">Current: 85% confidence required to block</span>
+                                <span id="threshold-desc" style="color:var(--text-secondary); font-weight:normal; font-size:0.875rem;">Recommended. Best accuracy/safety balance.</span>
+                            </div>
+                        </div>
+                        <div class="presets">
+                            <button class="preset-btn" onclick="setThreshold(70, this)">Conservative 70%</button>
+                            <button class="preset-btn active" onclick="setThreshold(85, this)">Balanced 85%</button>
+                            <button class="preset-btn" onclick="setThreshold(95, this)">Aggressive 95%</button>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3>Manual Blacklist</h3>
+                        <div style="display:flex; gap: 1rem; margin-bottom: 1rem;">
+                            <input type="text" id="bl-domain" placeholder="bad-domain.com" style="margin-bottom: 0;">
+                            <button class="btn" onclick="addBlacklist()">Block Domain</button>
+                        </div>
+                        <table id="bl-table">
+                            <thead><tr><th>Domain</th><th style="width:80px;">Action</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+
+                    <div class="card">
+                        <h3>Model Retrain</h3>
+                        <p>Manually trigger a full retraining of the ML model using the latest data.</p>
+                        <button class="btn outline" onclick="retrainModel()" style="margin-top: 1rem;">Retrain Now</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <script src="/assets/js/main.js"></script>
+    <script>
+        let saveTimeout;
+
+        async function initSettings() {
+            const me = await checkAuth();
+            if (me && me.is_admin) {
+                document.getElementById('proxy-card').style.display = 'block';
+                pollProxyStatus();
+                setInterval(pollProxyStatus, 5000);
+            }
+
+            const res = await fetch('/api/settings');
+            if (res.ok) {
+                const data = await res.json();
+                document.getElementById('threshold-slider').value = data.threshold || 85;
+                updateSliderUI();
+            }
+        }
+
+        const slider = document.getElementById('threshold-slider');
+        slider.addEventListener('input', () => {
+            updateSliderUI();
+            clearTimeout(saveTimeout);
+            saveTimeout = setTimeout(() => {
+                saveThreshold(slider.value);
+            }, 500);
+        });
+
+        function updateSliderUI() {
+            const val = parseInt(slider.value);
+            document.getElementById('threshold-val-text').textContent = `Current: ${val}% confidence required to block`;
+            
+            let desc = "";
+            document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+            if (val <= 75) { desc = "Fewer false positives. May miss some threats."; document.querySelectorAll('.preset-btn')[0].classList.add('active'); }
+            else if (val <= 90) { desc = "Recommended. Best accuracy/safety balance."; document.querySelectorAll('.preset-btn')[1].classList.add('active'); }
+            else { desc = "Maximum protection. May block some safe sites."; document.querySelectorAll('.preset-btn')[2].classList.add('active'); }
+            
+            document.getElementById('threshold-desc').textContent = desc;
+        }
+
+        function setThreshold(val, btnEl) {
+            slider.value = val;
+            updateSliderUI();
+            saveThreshold(val);
+        }
+
+        async function saveThreshold(val) {
+            const res = await fetch('/api/settings', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({threshold: parseInt(val)})
+            });
+            if (res.ok) showToast("✓ Threshold saved", "success");
+            else showToast("Failed to save threshold", "error");
+        }
+
+        async function pollProxyStatus() {
+            const res = await fetch('/api/proxy/status').catch(()=>{});
+            if (res && res.ok) {
+                const s = await res.json();
+                const dot = document.getElementById('proxy-dot');
+                const text = document.getElementById('proxy-state-text');
+                const meta = document.getElementById('proxy-meta');
+                const bStart = document.getElementById('btn-start-proxy');
+                const bStop = document.getElementById('btn-stop-proxy');
+
+                if (s.running) {
+                    dot.style.background = 'var(--success)';
+                    dot.style.boxShadow = '0 0 8px var(--success)';
+                    text.textContent = 'Running';
+                    text.style.color = 'var(--success)';
+                    const startStr = s.started_at ? new Date(s.started_at).toLocaleTimeString() : '';
+                    meta.textContent = `PID: ${s.pid} | Since: ${startStr}`;
+                    bStart.disabled = true;
+                    bStop.disabled = false;
+                } else if (s.error) {
+                    dot.style.background = 'var(--warning)';
+                    text.textContent = 'Error';
+                    text.style.color = 'var(--warning)';
+                    meta.textContent = s.error;
+                    bStart.disabled = false;
+                    bStop.disabled = true;
+                } else {
+                    dot.style.background = 'var(--danger)';
+                    dot.style.boxShadow = 'none';
+                    text.textContent = 'Stopped';
+                    text.style.color = 'var(--danger)';
+                    meta.textContent = 'Not currently intercepting traffic.';
+                    bStart.disabled = false;
+                    bStop.disabled = true;
+                }
+            }
+        }
+
+        async function controlProxy(action) {
+            const btn = document.getElementById(`btn-${action}-proxy`);
+            const originalText = btn.innerHTML;
+            btn.innerHTML = `<span class="spinner"></span> ${action === 'start' ? 'Starting...' : 'Stopping...'}`;
+            btn.disabled = true;
+
+            const res = await fetch('/api/proxy/control', {
+                method: 'POST',
+                headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({action})
+            });
+            
+            if (res.ok) {
+                showToast(`Proxy ${action}ed successfully`, "success");
+            } else {
+                const err = await res.json();
+                showToast(`Failed to ${action} proxy: ${err.error}`, "error");
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+            pollProxyStatus();
+        }
+
+        async function fetchBlacklist() {
+            const res = await fetch('/api/blacklist').catch(()=>{});
+            if(res && res.ok) {
+                const list = await res.json();
+                const tb = document.querySelector('#bl-table tbody');
+                tb.innerHTML = '';
+                list.forEach(item => {
+                    tb.innerHTML += `<tr><td>${item.domain}</td><td><button class="btn danger outline" style="padding:0.2rem 0.5rem" onclick="removeBlacklist('${item.domain}')">Remove</button></td></tr>`;
+                });
+            }
+        }
+        
+        async function addBlacklist() {
+            const d = document.getElementById('bl-domain').value;
+            if(!d) return;
+            await fetch('/api/blacklist/add', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({domain:d})});
+            document.getElementById('bl-domain').value = '';
+            showToast("Domain added to blacklist", "success");
+            fetchBlacklist();
+        }
+        
+        async function removeBlacklist(d) {
+            await fetch('/api/blacklist/remove', {method:'DELETE', headers:{'Content-Type':'application/json'}, body:JSON.stringify({domain:d})});
+            showToast("Domain removed", "success");
+            fetchBlacklist();
+        }
+        
+        async function retrainModel() {
+            showToast("Model retraining started...", "info");
+            await fetch('/api/model/retrain', {method: 'POST'});
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            initSettings();
+            fetchBlacklist();
+        });
+    </script>
+</body>
+</html>

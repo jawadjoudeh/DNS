@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Profile - SecureDNS Guard</title>
+    <link rel="stylesheet" href="/assets/css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="brand">SecureDNS Guard</div>
+        <div class="nav-links">
+            <a href="/dashboard.html">Dashboard</a>
+            <a href="/logout">Logout</a>
+        </div>
+    </nav>
+    <div class="container">
+        <div class="grid-2">
+            <div class="card">
+                <h3>My Profile</h3>
+                <div id="profile-info" style="margin-top: 1rem;"></div>
+            </div>
+            <div class="card">
+                <h3>API Keys</h3>
+                <button class="btn" onclick="generateKey()" style="margin-bottom: 1rem;">Generate New Key</button>
+                <div id="keys-list"></div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="/assets/js/main.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", async () => {
+            const me = await fetch('/api/auth/me').then(r => r.json());
+            document.getElementById('profile-info').innerHTML = `
+                <p><strong>Username:</strong> ${me.username}</p>
+                <p><strong>Email:</strong> ${me.email}</p>
+                <p><strong>Plan:</strong> <span class="badge blue">${me.plan}</span></p>
+                <p><strong>Provider:</strong> ${me.oauth_provider || 'Email'}</p>
+            `;
+            fetchKeys();
+        });
+        
+        async function fetchKeys() {
+            const res = await fetch('/api/v1/keys');
+            if (res.ok) {
+                const keys = await res.json();
+                const list = document.getElementById('keys-list');
+                list.innerHTML = '';
+                keys.forEach(k => {
+                    const div = document.createElement('div');
+                    div.style.background = '#0f172a';
+                    div.style.padding = '1rem';
+                    div.style.marginBottom = '1rem';
+                    div.style.borderRadius = '4px';
+                    
+                    div.innerHTML = `
+                        <div style="display:flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                            <strong>${k.name}</strong>
+                            <span>Uses Today: ${k.uses_today}</span>
+                        </div>
+                        <code style="color: var(--accent-primary); word-break: break-all;">${k.key_value}</code>
+                        <button class="btn outline" style="padding: 0.2rem 0.5rem; margin-top: 0.5rem;" onclick="navigator.clipboard.writeText('${k.key_value}')">Copy</button>
+                    `;
+                    list.appendChild(div);
+                });
+            }
+        }
+        
+        async function generateKey() {
+            await fetch('/api/v1/keys', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name: 'New Key'})});
+            fetchKeys();
+        }
+    </script>
+</body>
+</html>

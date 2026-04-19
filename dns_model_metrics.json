@@ -1,0 +1,1 @@
+{"accuracy": 1.0, "precision": 1.0, "recall": 1.0, "f1_score": 1.0, "train_samples": 12000, "trained_at": "2026-04-19T18:47:08.371629", "data_source": "Real Datasets", "class_distribution": {"benign": 4000, "dga": 4000, "tunneling": 4000}, "model_name": "Random Forest", "last_retrain_log_id": 0}
