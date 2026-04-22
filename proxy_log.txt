@@ -1,0 +1,21 @@
+[2026-04-20 13:01:14] Proxy started on port 53...
+[2026-04-20 13:01:25] WARNING: API unreachable - pass-through for wpad.ju.edu.jo
+[2026-04-20 13:01:25] FORWARDED: wpad.ju.edu.jo
+[2026-04-20 13:01:28] WARNING: API unreachable - pass-through for wpad.ju.edu.jo
+[2026-04-20 13:01:28] FORWARDED: wpad.ju.edu.jo
+[2026-04-20 13:01:30] WARNING: API unreachable - pass-through for aks-prod-switzerlandnorth.access-point.cloudmessaging.edge.microsoft.com
+[2026-04-20 13:01:30] FORWARDED: aks-prod-switzerlandnorth.access-point.cloudmessaging.edge.microsoft.com
+[2026-04-20 13:01:33] WARNING: API unreachable - pass-through for aks-prod-switzerlandnorth.access-point.cloudmessaging.edge.microsoft.com
+[2026-04-20 13:01:33] FORWARDED: aks-prod-switzerlandnorth.access-point.cloudmessaging.edge.microsoft.com
+[2026-04-20 13:01:35] WARNING: API unreachable - pass-through for aks-prod-switzerlandnorth.access-point.cloudmessaging.edge.microsoft.com
+[2026-04-20 13:01:35] FORWARDED: aks-prod-switzerlandnorth.access-point.cloudmessaging.edge.microsoft.com
+[2026-04-20 13:01:37] WARNING: API unreachable - pass-through for your_server_url.ju.edu.jo
+[2026-04-20 13:01:37] FORWARDED: your_server_url.ju.edu.jo
+[2026-04-20 13:01:39] WARNING: API unreachable - pass-through for your_server_url.ju.edu.jo
+[2026-04-20 13:01:39] FORWARDED: your_server_url.ju.edu.jo
+[2026-04-20 13:01:46] WARNING: API unreachable - pass-through for aks-prod-switzerlandnorth.access-point.cloudmessaging.edge.microsoft.com
+[2026-04-20 13:01:46] FORWARDED: aks-prod-switzerlandnorth.access-point.cloudmessaging.edge.microsoft.com
+[2026-04-20 13:01:49] WARNING: API unreachable - pass-through for wpad.ju.edu.jo
+[2026-04-20 13:01:49] FORWARDED: wpad.ju.edu.jo
+[2026-04-20 13:01:51] WARNING: API unreachable - pass-through for wpad.ju.edu.jo
+[2026-04-20 13:01:51] FORWARDED: wpad.ju.edu.jo
