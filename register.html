@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register – SecureDNS Guard</title>
+    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+    <link rel="stylesheet" href="/assets/css/style.css">
+    <style>
+        .auth-wrapper { background-image: radial-gradient(ellipse at top left, var(--accent-glow) 0%, transparent 40%), radial-gradient(ellipse at bottom right, rgba(59,130,246,0.08) 0%, transparent 40%); }
+        .auth-card { animation: modalIn 0.4s ease; }
+        .divider { display: flex; align-items: center; margin: 1.5rem 0; gap: 0.75rem; }
+        .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border-color); }
+        .divider span { color: var(--text-secondary); font-size: 0.8rem; font-weight: 500; }
+        .field-label { font-weight: 600; font-size: 0.8rem; margin-bottom: 0.35rem; display: block; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; }
+        .name-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+        .password-hint { font-size: 0.75rem; color: var(--text-secondary); margin-top: -0.75rem; margin-bottom: 1rem; }
+    </style>
+</head>
+<body>
+    <div class="auth-wrapper">
+        <div class="card auth-card" style="max-width: 460px;">
+            <div class="auth-header">
+                <svg viewBox="0 0 24 24" fill="var(--accent)" width="48" height="48"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
+                <h2 style="margin-top: 0.75rem; font-weight: 700;">Create Account</h2>
+                <p class="text-muted" style="margin-top: 0.25rem;">Join SecureDNS Guard to protect your network</p>
+            </div>
+
+            <form id="registerForm">
+                <div>
+                    <label class="field-label">Full Name</label>
+                    <input type="text" id="name" placeholder="John Doe" required>
+                </div>
+                <div>
+                    <label class="field-label">Username</label>
+                    <input type="text" id="username" placeholder="johndoe" required pattern="[a-zA-Z0-9_]+" title="Letters, numbers, and underscores only">
+                </div>
+                <div>
+                    <label class="field-label">Email</label>
+                    <input type="email" id="email" placeholder="john@example.com" required>
+                </div>
+                <div>
+                    <label class="field-label">Password</label>
+                    <input type="password" id="password" placeholder="Min 6 characters" required minlength="6">
+                    <div class="password-hint">At least 6 characters</div>
+                </div>
+                <div>
+                    <label class="field-label">Confirm Password</label>
+                    <input type="password" id="password2" placeholder="Re-enter password" required>
+                </div>
+                <button type="submit" class="btn" id="submit-btn" style="width: 100%; padding: 0.65rem;">Create Account</button>
+                <div id="error-msg" class="text-danger" style="text-align: center; font-size: 0.875rem; margin-top: 1rem;"></div>
+            </form>
+
+            <div class="divider"><span>OR</span></div>
+
+            <div style="text-align: center;">
+                <span class="text-muted" style="font-size: 0.9rem;">Already have an account?</span>
+                <a href="/login.html" style="font-weight: 600; margin-left: 0.25rem;">Sign In</a>
+            </div>
+
+            <div style="text-align: center; margin-top: 1rem; font-size: 0.85rem;">
+                <a href="/" style="color: var(--text-secondary);">← Back to Home</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function(){
+            const saved = localStorage.getItem('theme');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            if (saved === 'dark' || (!saved && prefersDark)) {
+                document.documentElement.setAttribute('data-theme', 'dark');
+            }
+        })();
+
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('submit-btn');
+            const errEl = document.getElementById('error-msg');
+            errEl.textContent = '';
+
+            const password = document.getElementById('password').value;
+            const password2 = document.getElementById('password2').value;
+
+            if (password !== password2) {
+                errEl.textContent = 'Passwords do not match';
+                return;
+            }
+
+            btn.innerHTML = '<span class="spinner"></span> Creating account…';
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        name: document.getElementById('name').value,
+                        username: document.getElementById('username').value,
+                        email: document.getElementById('email').value,
+                        password: password
+                    })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    window.location.href = data.redirect || '/dashboard';
+                } else {
+                    errEl.textContent = data.error || 'Registration failed';
+                    btn.textContent = 'Create Account';
+                    btn.disabled = false;
+                }
+            } catch(err) {
+                errEl.textContent = 'Network error. Please try again.';
+                btn.textContent = 'Create Account';
+                btn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

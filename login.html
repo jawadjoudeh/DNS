@@ -2,62 +2,104 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Login - SecureDNS Guard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login – SecureDNS Guard</title>
+    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
     <link rel="stylesheet" href="/assets/css/style.css">
+    <style>
+        .auth-wrapper { background-image: radial-gradient(ellipse at top left, var(--accent-glow) 0%, transparent 40%), radial-gradient(ellipse at bottom right, rgba(59,130,246,0.08) 0%, transparent 40%); }
+        .auth-card { animation: modalIn 0.4s ease; }
+        .divider { display: flex; align-items: center; margin: 1.5rem 0; gap: 0.75rem; }
+        .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border-color); }
+        .divider span { color: var(--text-secondary); font-size: 0.8rem; font-weight: 500; }
+    </style>
 </head>
 <body>
-    <div class="container auth-form">
-        <div class="card">
-            <h2 style="text-align: center; margin-bottom: 1.5rem;">Login</h2>
+    <div class="auth-wrapper">
+        <div class="card auth-card">
+            <div class="auth-header">
+                <svg viewBox="0 0 24 24" fill="var(--accent)" width="48" height="48"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
+                <h2 style="margin-top: 0.75rem; font-weight: 700;">SecureDNS Guard</h2>
+                <p class="text-muted" style="margin-top: 0.25rem;">Sign in to manage your network</p>
+            </div>
+
             <form id="loginForm">
-                <input type="text" id="identity" placeholder="Email or Username" required>
-                <div style="position: relative;">
+                <div>
+                    <label style="font-weight: 600; font-size: 0.8rem; margin-bottom: 0.35rem; display: block; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em;">Username or Email</label>
+                    <input type="text" id="identity" placeholder="admin@network.local" required>
+                </div>
+                <div>
+                    <label style="font-weight: 600; font-size: 0.8rem; margin-bottom: 0.35rem; display: block; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em;">Password</label>
                     <input type="password" id="password" placeholder="Password" required>
-                    <button type="button" onclick="document.getElementById('password').type = document.getElementById('password').type === 'password' ? 'text' : 'password'" style="position: absolute; right: 10px; top: 12px; background: none; border: none; color: #fff; cursor: pointer;">👁️</button>
                 </div>
-                <div style="margin-bottom: 1rem;">
-                    <label><input type="checkbox"> Remember me</label>
-                </div>
-                <button type="submit" class="btn" style="width: 100%;">Sign In</button>
-                <div id="error-msg" style="color: var(--danger); margin-top: 1rem; text-align: center;"></div>
+                <button type="submit" class="btn" id="submit-btn" style="width: 100%; padding: 0.65rem;">Sign In</button>
+                <div id="error-msg" class="text-danger" style="text-align: center; font-size: 0.875rem; margin-top: 1rem;"></div>
             </form>
-            
-            <div id="oauth-section" style="margin-top: 2rem; text-align: center;">
-                <div style="color: var(--text-secondary); margin-bottom: 1rem;">── or continue with ──</div>
-                <div id="oauth-buttons" style="display: flex; gap: 1rem; justify-content: center;"></div>
+
+            <div id="oauth-section" style="display: none;">
+                <div class="divider"><span>OR</span></div>
+                <div id="oauth-buttons" class="d-flex gap-2" style="justify-content: center;"></div>
+            </div>
+
+            <div style="text-align: center; margin-top: 1.5rem; font-size: 0.9rem;">
+                <span class="text-muted">Don't have an account?</span>
+                <a href="/register.html" style="font-weight: 600; margin-left: 0.25rem;">Create Account</a>
+            </div>
+
+            <div style="text-align: center; margin-top: 0.75rem; font-size: 0.85rem;">
+                <a href="/" style="color: var(--text-secondary);">← Back to Home</a>
             </div>
         </div>
     </div>
-    
-    <script src="/assets/js/main.js"></script>
+
     <script>
+        (function(){
+            const saved = localStorage.getItem('theme');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            if (saved === 'dark' || (!saved && prefersDark)) {
+                document.documentElement.setAttribute('data-theme', 'dark');
+            }
+        })();
+
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const btn = e.target.querySelector('button[type="submit"]');
-            btn.textContent = 'Loading...';
-            
-            const identity = document.getElementById('identity').value;
-            const password = document.getElementById('password').value;
-            
-            const res = await fetch('/api/auth/login', {
-                method: 'POST', headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({identity, password})
-            });
-            const data = await res.json();
-            
-            if (data.success) {
-                window.location.href = data.redirect;
-            } else {
-                document.getElementById('error-msg').textContent = data.error;
+            const btn = document.getElementById('submit-btn');
+            const errEl = document.getElementById('error-msg');
+            errEl.textContent = '';
+            btn.innerHTML = '<span class="spinner"></span> Signing in…';
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        identity: document.getElementById('identity').value,
+                        password: document.getElementById('password').value
+                    })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    window.location.href = data.redirect;
+                } else {
+                    errEl.textContent = data.error || 'Login failed';
+                    btn.textContent = 'Sign In';
+                    btn.disabled = false;
+                }
+            } catch(err) {
+                errEl.textContent = 'Network error. Please try again.';
                 btn.textContent = 'Sign In';
+                btn.disabled = false;
             }
         });
-        
+
         fetch('/api/auth/providers').then(r => r.json()).then(p => {
             const container = document.getElementById('oauth-buttons');
-            if (p.google) container.innerHTML += `<a href="/api/auth/google/login" class="btn" style="background: white; color: black;">G Google</a>`;
-            if (p.github) container.innerHTML += `<a href="/api/auth/github/login" class="btn" style="background: #333; color: white;">GitHub</a>`;
-        });
+            let has = false;
+            if (p.google) { container.innerHTML += `<a href="/api/auth/google/login" class="btn outline" style="flex:1;">Google</a>`; has = true; }
+            if (p.github) { container.innerHTML += `<a href="/api/auth/github/login" class="btn outline" style="flex:1;">GitHub</a>`; has = true; }
+            if (has) document.getElementById('oauth-section').style.display = 'block';
+        }).catch(() => {});
     </script>
 </body>
 </html>

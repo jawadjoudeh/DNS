@@ -2,28 +2,38 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>SecureDNS - Admin Panel</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login – SecureDNS Guard</title>
+        <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
     <link rel="stylesheet" href="/assets/css/style.css">
-    <style>
-        body { background-color: #000; }
-        .admin-form { max-width: 400px; margin: 10rem auto; text-align: center; }
-        .admin-form .card { background-color: #111; border: 1px solid #333; }
-        .admin-form input { background-color: #000; border: 1px solid #444; color: #0f0; font-family: monospace; }
-        .admin-form .btn { background-color: #333; color: #fff; border: 1px solid #555; }
-        .admin-form .btn:hover { background-color: #444; }
-    </style>
 </head>
 <body>
-    <div class="container admin-form">
-        <div class="card">
-            <h2 style="color: #fff; margin-bottom: 0.5rem;">SecureDNS - Admin Panel</h2>
-            <p style="color: #666; margin-bottom: 2rem; font-size: 0.9rem;">Restricted Access. Authorized Personnel Only.</p>
-            <form method="POST" action="/admin/login">
-                <input type="password" name="token" placeholder="Admin Token" required>
-                <button type="submit" class="btn" style="width: 100%; margin-top: 1rem;">Access Admin Panel</button>
-                <div style="color: var(--danger); margin-top: 1rem;">{{ error }}</div>
+    <div class="auth-wrapper">
+        <div class="card auth-card">
+            <div class="auth-header">
+                <svg viewBox="0 0 24 24" fill="var(--accent)" width="48" height="48"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
+                <h2 style="margin-top:0.75rem;">Admin Console</h2>
+                <p class="text-muted" style="margin-top:0.25rem;">Enter the admin panel token</p>
+            </div>
+
+            <form action="/admin/login" method="POST">
+                <label style="font-weight:500; font-size:0.875rem; display:block; color:var(--text-secondary); margin-bottom:0.25rem;">Admin Token</label>
+                <input type="password" name="token" placeholder="Enter admin token" required>
+                {% if error %}<div class="text-danger mb-3" style="font-size:0.85rem;">{{ error }}</div>{% endif %}
+                <button type="submit" class="btn" style="width:100%;">Sign in as Admin</button>
             </form>
+
+            <div style="text-align:center; margin-top:1.5rem; font-size:0.85rem;">
+                <a href="/login.html" style="color:var(--text-secondary);">← User login</a>
+            </div>
         </div>
     </div>
+    <script>
+        (function(){
+            const saved = localStorage.getItem('theme');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            if (saved === 'dark' || (!saved && prefersDark)) document.documentElement.setAttribute('data-theme', 'dark');
+        })();
+    </script>
 </body>
 </html>

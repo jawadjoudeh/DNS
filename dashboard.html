@@ -2,126 +2,231 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Dashboard - SecureDNS Guard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard – SecureDNS Guard</title>
+    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
     <link rel="stylesheet" href="/assets/css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <div class="app-container">
-        <aside class="sidebar">
-            <div class="brand">🛡️ SecureDNS</div>
-            <a href="/dashboard.html" class="nav-item">Dashboard</a>
-            <a href="/threat_logs.html" class="nav-item">Threat Logs</a>
-            <a href="/profile.html" class="nav-item">API Keys</a>
-            <a href="/settings.html" class="nav-item">Settings</a>
-            <a href="/logout" class="nav-item" style="margin-top: auto; color: var(--danger);">Logout</a>
-        </aside>
-        
+    <div class="app-layout">
+        <aside class="sidebar" id="sidebar"></aside>
         <div class="sidebar-overlay"></div>
+        
+        <main class="main-wrapper">
+            <header class="topbar" id="topbar"></header>
+            
+            <div class="content">
+                <div class="page-header"><h1 class="page-title">Dashboard</h1></div>
 
-        <main class="main-content">
-            <header class="top-header">
-                <button class="hamburger-btn">☰</button>
-                <h2>Overview Dashboard</h2>
-                <div id="user-profile" style="display:flex; align-items:center; gap:10px;"></div>
-            </header>
-
-            <div class="content-area">
-                <div class="grid-kpi">
-                    <div class="card kpi-card"><h3>Total Queries</h3><div class="value skeleton" id="kpi-total">0000</div></div>
-                    <div class="card kpi-card"><h3>Threats Blocked</h3><div class="value skeleton" id="kpi-blocked" style="color: var(--danger);">000</div></div>
-                    <div class="card kpi-card"><h3>Safe Queries</h3><div class="value skeleton" id="kpi-safe" style="color: var(--success);">000</div></div>
-                    <div class="card kpi-card"><h3>Model Accuracy</h3><div class="value skeleton" id="kpi-acc">00.0%</div></div>
+                <!-- Proxy status bar -->
+                <div class="proxy-bar" id="proxy-bar">
+                    <div class="status-dot stopped" id="pb-dot"></div>
+                    <span class="status-label off" id="pb-label">Checking…</span>
+                    <span class="text-muted" style="flex:1; font-size:0.85rem;" id="pb-detail"></span>
                 </div>
 
-                <div class="grid-2" style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
-                    <div class="card">
-                        <h3>Traffic Over Time (24h)</h3>
-                        <div style="height: 300px; margin-top: 1rem;"><canvas id="hourlyChart"></canvas></div>
+                <!-- Stat cards with color tints -->
+                <div class="grid-4 mb-4">
+                    <div class="card stat-card stat-blue">
+                        <div class="stat-title">DNS Queries</div>
+                        <div class="stat-value blue skeleton" id="kpi-total">0</div>
+                        <div class="stat-subtitle" id="kpi-total-sub"></div>
                     </div>
-                    <div class="card">
-                        <h3>Recent Alerts</h3>
-                        <div id="alerts-feed" style="margin-top: 1rem; display: flex; flex-direction: column; gap: 0.5rem;">
-                            <div class="skeleton" style="height:40px; border-radius:6px;"></div>
-                            <div class="skeleton" style="height:40px; border-radius:6px;"></div>
-                            <div class="skeleton" style="height:40px; border-radius:6px;"></div>
+                    <div class="card stat-card stat-red">
+                        <div class="stat-title">Blocked by filters</div>
+                        <div class="stat-value red skeleton" id="kpi-blocked">0</div>
+                        <div class="stat-subtitle" id="kpi-blocked-sub"></div>
+                    </div>
+                    <div class="card stat-card stat-green">
+                        <div class="stat-title">Safe queries</div>
+                        <div class="stat-value green skeleton" id="kpi-safe">0</div>
+                        <div class="stat-subtitle" id="kpi-safe-sub"></div>
+                    </div>
+                    <div class="card stat-card stat-yellow">
+                        <div class="stat-title">Model Accuracy</div>
+                        <div class="stat-value yellow skeleton" id="kpi-acc">0%</div>
+                        <div class="stat-subtitle">Random Forest</div>
+                    </div>
+                </div>
+
+                <!-- Chart -->
+                <div class="card mb-4">
+                    <div class="card-header"><h2 class="card-title">DNS queries</h2></div>
+                    <div id="chart-container" style="height: 300px; position: relative;">
+                        <div class="empty-state" id="chart-empty">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>
+                            <p>No DNS data collected yet.<br>Start the proxy to begin monitoring.</p>
                         </div>
+                        <canvas id="hourlyChart"></canvas>
+                    </div>
+                </div>
+                
+                <!-- Recent blocked -->
+                <div class="card">
+                    <div class="card-header"><h2 class="card-title">Recent blocked domains</h2></div>
+                    <div class="table-responsive" style="margin: 0;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="background:transparent;">Time</th>
+                                    <th style="background:transparent;">Client IP</th>
+                                    <th style="background:transparent;">Domain</th>
+                                    <th style="background:transparent;">Confidence</th>
+                                </tr>
+                            </thead>
+                            <tbody id="alerts-feed">
+                                <tr><td colspan="4" class="skeleton" style="height:40px; border-color:transparent;"></td></tr>
+                                <tr><td colspan="4" class="skeleton" style="height:40px; border-color:transparent;"></td></tr>
+                                <tr><td colspan="4" class="skeleton" style="height:40px; border-color:transparent;"></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="mt-3" style="text-align:center;">
+                        <a href="/threat_logs.html?verdict=Malicious" style="font-size:0.875rem;">View all blocked domains →</a>
                     </div>
                 </div>
             </div>
         </main>
     </div>
-    
+
     <script src="/assets/js/main.js"></script>
     <script>
-        let myChart = null;
-
         document.addEventListener("DOMContentLoaded", async () => {
             const me = await checkAuth();
             if (me) {
-                document.getElementById('user-profile').innerHTML = `
-                    <span style="font-size: 0.875rem;">Welcome, <strong>${me.username}</strong></span>
-                    <span class="badge blue">${me.plan.toUpperCase()}</span>
-                `;
+                document.getElementById('sidebar').innerHTML = renderSidebar(me.is_admin);
+                document.getElementById('topbar').innerHTML = renderTopbar(me);
+                setActiveNavLink(); initMobileMenu(); initThemeToggle();
             }
             initDashboardPoller();
+            pollProxyBar();
+            setInterval(pollProxyBar, 5000);
             fetchHourly();
             fetchAlerts();
-            setInterval(fetchAlerts, 5000);
-            
-            // Check for new alerts to show toast
+            setInterval(fetchAlerts, 30000);
+
             fetch('/api/alerts/check').then(r=>r.json()).then(d => {
-                if(d.alert) showToast("New high-confidence threats detected recently!", "warning", 5000);
+                if(d.alert) showToast("New high-confidence threats detected!", "warning", 5000);
             }).catch(()=>{});
         });
 
+        /* ── Enhanced KPI poller with percentages ── */
+        const _origPoller = initDashboardPoller;
+        function initDashboardPoller() {
+            const update = async () => {
+                try {
+                    const res = await fetch('/api/stats/overview');
+                    if (!res.ok) return;
+                    const d = await res.json();
+                    const set = (id, val) => { const el = document.getElementById(id); if (el) { el.classList.remove('skeleton'); el.textContent = val; } };
+                    set('kpi-total', d.total_queries.toLocaleString());
+                    set('kpi-blocked', d.blocked_queries.toLocaleString());
+                    set('kpi-safe', d.safe_queries.toLocaleString());
+                    set('kpi-acc', (d.model_accuracy * 100).toFixed(1) + '%');
+                    // Percentage subtitles
+                    const total = d.total_queries || 1;
+                    document.getElementById('kpi-total-sub').textContent = 'last 24 hours';
+                    document.getElementById('kpi-blocked-sub').textContent = ((d.blocked_queries / total) * 100).toFixed(1) + '% of total';
+                    document.getElementById('kpi-safe-sub').textContent = ((d.safe_queries / total) * 100).toFixed(1) + '% of total';
+                } catch {}
+            };
+            update();
+            setInterval(update, 10000);
+        }
+
+        /* ── Proxy status bar ── */
+        async function pollProxyBar() {
+            try {
+                const res = await fetch('/api/proxy/status');
+                if (!res.ok) return;
+                const s = await res.json();
+                const dot = document.getElementById('pb-dot');
+                const label = document.getElementById('pb-label');
+                const detail = document.getElementById('pb-detail');
+                if (s.running) {
+                    dot.className = 'status-dot running';
+                    label.className = 'status-label on';
+                    label.textContent = 'DNS Protection: ON';
+                    detail.textContent = `PID ${s.pid}`;
+                } else {
+                    dot.className = 'status-dot stopped';
+                    label.className = 'status-label off';
+                    label.textContent = 'DNS Protection: OFF';
+                    detail.textContent = s.error || 'Proxy is not running';
+                }
+            } catch {
+                document.getElementById('pb-label').textContent = 'DNS Protection: Unknown';
+            }
+        }
+
+        /* ── Chart with empty-state ── */
         async function fetchHourly() {
             const res = await fetch('/api/stats/hourly');
             if (!res.ok) return;
             const data = await res.json();
             
+            const hasData = data.some(d => d.safe > 0 || d.blocked > 0);
+            const emptyEl = document.getElementById('chart-empty');
+            const canvas = document.getElementById('hourlyChart');
+
+            if (!hasData) {
+                emptyEl.style.display = 'flex';
+                canvas.style.display = 'none';
+                return;
+            }
+            emptyEl.style.display = 'none';
+            canvas.style.display = 'block';
+
             const labels = data.map(d => new Date(d.hour).getHours() + ':00');
             const safe = data.map(d => d.safe);
             const blocked = data.map(d => d.blocked);
 
-            const ctx = document.getElementById('hourlyChart').getContext('2d');
-            myChart = new Chart(ctx, {
-                type: 'line',
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            const gridColor = isDark ? '#373a40' : '#e4e7eb';
+            const textColor = isDark ? '#909296' : '#737f8d';
+
+            new Chart(canvas.getContext('2d'), {
+                type: 'bar',
                 data: {
-                    labels: labels,
+                    labels,
                     datasets: [
-                        { label: 'Safe', data: safe, borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,0.1)', fill: true, tension: 0.4 },
-                        { label: 'Blocked', data: blocked, borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,0.1)', fill: true, tension: 0.4 }
+                        { label: 'Blocked', data: blocked, backgroundColor: '#e25858', borderRadius: 2 },
+                        { label: 'Safe', data: safe, backgroundColor: '#5db976', borderRadius: 2 }
                     ]
                 },
                 options: {
                     responsive: true, maintainAspectRatio: false,
                     scales: {
-                        x: { grid: { color: '#1e293b' }, ticks: { color: '#94a3b8' } },
-                        y: { grid: { color: '#1e293b' }, ticks: { color: '#94a3b8' } }
+                        x: { stacked: true, grid: { color: gridColor }, ticks: { color: textColor } },
+                        y: { stacked: true, grid: { color: gridColor }, ticks: { color: textColor } }
                     },
-                    plugins: { legend: { labels: { color: '#f8fafc' } } }
+                    plugins: { legend: { labels: { color: textColor, usePointStyle: true, boxWidth: 8 } } }
                 }
             });
         }
 
+        /* ── Recent alerts ── */
         async function fetchAlerts() {
             const res = await fetch('/api/logs/recent-alerts');
             if (res.ok) {
                 const logs = await res.json();
                 const feed = document.getElementById('alerts-feed');
                 feed.innerHTML = '';
-                if(logs.length === 0) feed.innerHTML = '<p style="color:var(--text-secondary);font-size:0.875rem;">No recent threats.</p>';
+                if (logs.length === 0) {
+                    feed.innerHTML = `<tr><td colspan="4"><div class="empty-state" style="padding:2rem;">
+                        <svg viewBox="0 0 24 24" fill="currentColor" style="width:32px;height:32px;"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
+                        <p>No blocked domains yet. All clear!</p>
+                    </div></td></tr>`;
+                    return;
+                }
                 logs.forEach(l => {
-                    feed.innerHTML += `
-                        <div style="background: rgba(239,68,68,0.1); border-left: 3px solid var(--danger); padding: 0.75rem; border-radius: 4px;">
-                            <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--text-secondary); margin-bottom:0.25rem;">
-                                <span>${new Date(l.timestamp).toLocaleTimeString()}</span>
-                                <span>${(l.confidence*100).toFixed(0)}% Conf.</span>
-                            </div>
-                            <div style="font-family:monospace; color:var(--danger); word-break: break-all;">${l.domain_name}</div>
-                        </div>
-                    `;
+                    feed.innerHTML += `<tr>
+                        <td class="text-muted" style="white-space:nowrap;">${new Date(l.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</td>
+                        <td>${l.source_ip}</td>
+                        <td class="text-danger" style="word-break:break-all;">${l.domain_name}</td>
+                        <td><span class="badge red">${(l.confidence*100).toFixed(0)}%</span></td>
+                    </tr>`;
                 });
             }
         }

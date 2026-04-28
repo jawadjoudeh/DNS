@@ -2,11 +2,143 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>API Documentation - SecureDNS Guard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setup Guide – SecureDNS Guard</title>
+    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
     <link rel="stylesheet" href="/assets/css/style.css">
+    <style>
+        .code-block {
+            background: var(--bg-base); border: 1px solid var(--border-color);
+            border-radius: var(--border-radius-sm); padding: 1.25rem; font-family: 'Courier New', monospace;
+            font-size: 0.85rem; overflow-x: auto; white-space: pre; line-height: 1.7;
+            margin-bottom: 1rem; position: relative;
+        }
+        .code-block .copy-btn {
+            position: absolute; top: 0.5rem; right: 0.5rem;
+            background: var(--bg-card); border: 1px solid var(--border-color);
+            padding: 0.25rem 0.5rem; border-radius: 4px; cursor: pointer;
+            font-size: 0.75rem; color: var(--text-secondary); transition: all 0.2s;
+        }
+        .code-block .copy-btn:hover { color: var(--accent); border-color: var(--accent); }
+        .step-number {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 28px; height: 28px; border-radius: 50%; font-size: 0.8rem; font-weight: 700;
+            background: var(--accent-glow); color: var(--accent); margin-right: 0.75rem; flex-shrink: 0;
+        }
+        .step-row { display: flex; align-items: flex-start; margin-bottom: 1.5rem; }
+        .endpoint-method {
+            display: inline-block; padding: 0.15rem 0.5rem; border-radius: 4px;
+            font-size: 0.7rem; font-weight: 700; margin-right: 0.5rem; letter-spacing: 0.05em;
+        }
+        .method-post { background: rgba(59,130,246,0.12); color: var(--info); }
+        .method-get { background: rgba(16,185,129,0.12); color: var(--success); }
+        .method-delete { background: rgba(239,68,68,0.12); color: var(--danger); }
+    </style>
 </head>
 <body>
-    <nav class="navbar"><div class="brand">SecureDNS Guard</div><div class="nav-links"><a href="/dashboard.html">Dashboard</a></div></nav>
-    <div class="container"><div class="card"><h3>API Documentation</h3><p>POST /api/v1/check</p><p>Headers: X-API-Key</p></div></div>
+    <div class="app-layout">
+        <aside class="sidebar" id="sidebar"></aside>
+        <div class="sidebar-overlay"></div>
+        <main class="main-wrapper">
+            <header class="topbar" id="topbar"></header>
+            <div class="content">
+                <div class="page-header"><h1 class="page-title">Setup Guide</h1></div>
+
+                <div class="card mb-4">
+                    <div class="card-header"><h2 class="card-title">Quick Start</h2></div>
+                    <div class="step-row">
+                        <span class="step-number">1</span>
+                        <div><strong>Get your API Key</strong><br><span class="text-muted">Go to the <a href="/profile.html">API Keys</a> page and copy your key.</span></div>
+                    </div>
+                    <div class="step-row">
+                        <span class="step-number">2</span>
+                        <div><strong>Add the header</strong><br><span class="text-muted">Include your key in the <code>X-API-Key</code> header of every request.</span></div>
+                    </div>
+                    <div class="step-row">
+                        <span class="step-number">3</span>
+                        <div><strong>Call the API</strong><br><span class="text-muted">Send POST requests to <code>/api/v1/check</code> with a JSON body.</span></div>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header"><h2 class="card-title">Authentication</h2></div>
+                    <p class="text-muted mb-3">Include your API key in every request header:</p>
+                    <div class="code-block">X-API-Key: sk-your_api_key_here</div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header"><h2 class="card-title"><span class="endpoint-method method-post">POST</span> /api/v1/check</h2></div>
+                    <p class="text-muted mb-3">Classify a domain against the ML model.</p>
+                    <p style="font-weight:600; font-size:0.85rem; margin-bottom:0.5rem;">Request:</p>
+                    <div class="code-block">curl -X POST http://localhost:5000/api/v1/check \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: YOUR_KEY" \
+  -d '{"domain": "example.com"}'</div>
+                    <p style="font-weight:600; font-size:0.85rem; margin-bottom:0.5rem;">Response:</p>
+                    <div class="code-block">{
+  "prediction": "Safe",
+  "confidence": 0.97,
+  "blocked": false,
+  "action": "Allowed",
+  "attack_type": null,
+  "features": [11, 0, 7, 3.02, 0, 0.0, 0.36, 0.45, 0.09, 0]
+}</div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header"><h2 class="card-title"><span class="endpoint-method method-post">POST</span> /api/classify</h2></div>
+                    <p class="text-muted mb-3">Classify a domain (session-authenticated, no API key needed if logged in).</p>
+                    <div class="code-block">POST /api/classify
+Content-Type: application/json
+
+{"domain": "suspicious-domain.xyz"}</div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header"><h2 class="card-title">API Endpoints Reference</h2></div>
+                    <div class="table-responsive" style="margin:0;">
+                        <table>
+                            <thead><tr><th>Method</th><th>Endpoint</th><th>Description</th><th>Auth</th></tr></thead>
+                            <tbody>
+                                <tr><td><span class="endpoint-method method-post">POST</span></td><td style="font-family:monospace;">/api/v1/check</td><td>Classify domain</td><td><span class="badge blue">API Key</span></td></tr>
+                                <tr><td><span class="endpoint-method method-post">POST</span></td><td style="font-family:monospace;">/api/classify</td><td>Classify domain</td><td><span class="badge gray">Session</span></td></tr>
+                                <tr><td><span class="endpoint-method method-get">GET</span></td><td style="font-family:monospace;">/api/stats/overview</td><td>Dashboard stats</td><td><span class="badge gray">Session</span></td></tr>
+                                <tr><td><span class="endpoint-method method-get">GET</span></td><td style="font-family:monospace;">/api/logs</td><td>Query logs (paginated)</td><td><span class="badge gray">Session</span></td></tr>
+                                <tr><td><span class="endpoint-method method-get">GET</span></td><td style="font-family:monospace;">/api/logs/export</td><td>Export logs as CSV</td><td><span class="badge gray">Session</span></td></tr>
+                                <tr><td><span class="endpoint-method method-get">GET</span></td><td style="font-family:monospace;">/api/settings</td><td>Get settings</td><td><span class="badge gray">Session</span></td></tr>
+                                <tr><td><span class="endpoint-method method-post">POST</span></td><td style="font-family:monospace;">/api/settings</td><td>Update settings</td><td><span class="badge red">Admin</span></td></tr>
+                                <tr><td><span class="endpoint-method method-post">POST</span></td><td style="font-family:monospace;">/api/blacklist/add</td><td>Add domain to blocklist</td><td><span class="badge red">Admin</span></td></tr>
+                                <tr><td><span class="endpoint-method method-delete">DEL</span></td><td style="font-family:monospace;">/api/blacklist/remove</td><td>Remove from blocklist</td><td><span class="badge red">Admin</span></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header"><h2 class="card-title">Rate Limits</h2></div>
+                    <div class="table-responsive" style="margin:0;">
+                        <table>
+                            <thead><tr><th>Plan</th><th>Daily Limit</th><th>API Keys</th><th>Batch Support</th></tr></thead>
+                            <tbody>
+                                <tr><td><span class="badge gray">FREE</span></td><td>100 queries/day</td><td>1</td><td>✕</td></tr>
+                                <tr><td><span class="badge blue">PRO</span></td><td>10,000 queries/day</td><td>5</td><td>✓</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="/assets/js/main.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", async () => {
+            const me = await checkAuth();
+            if (me) {
+                document.getElementById('sidebar').innerHTML = renderSidebar(me.is_admin);
+                document.getElementById('topbar').innerHTML = renderTopbar(me);
+                setActiveNavLink(); initMobileMenu(); initThemeToggle();
+            }
+        });
+    </script>
 </body>
 </html>

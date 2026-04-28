@@ -2,70 +2,103 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>ML Model - Admin</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ML Model – SecureDNS Guard Admin</title>
+        <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
     <link rel="stylesheet" href="/assets/css/style.css">
+    <style>
+        .admin-sidebar { width: 250px; background: var(--bg-sidebar); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 1.5rem 0; }
+        .admin-sidebar .sidebar-header { padding: 0 1.5rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.75rem; }
+        .admin-sidebar .nav-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1.5rem; color: var(--text-primary); font-weight: 500; border-left: 3px solid transparent; }
+        .admin-sidebar .nav-item:hover { background: rgba(0,0,0,0.03); }
+        .admin-sidebar .nav-item.active { background: rgba(93,185,118,0.08); color: var(--accent); border-left-color: var(--accent); }
+        .metric-ring { width: 120px; height: 120px; border-radius: 50%; border: 8px solid var(--border-color); display: flex; align-items: center; justify-content: center; font-size: 1.75rem; font-weight: 700; margin: 0 auto 1rem; }
+        .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: #fff; animation: spin 1s linear infinite; vertical-align: middle; margin-right: 0.5rem; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
 </head>
 <body>
-    <nav class="navbar">
-        <div class="brand">Admin Panel</div>
-        <div class="nav-links">
-            <a href="/admin/dashboard">Dashboard</a>
-            <a href="/admin/users">Users</a>
-            <a href="/admin/logs">Logs</a>
-            <a href="/admin/model" style="color: white;">ML Model</a>
-            <a href="/admin/logout">Logout</a>
-        </div>
-    </nav>
-    <div class="container grid-2">
-        <div class="card">
-            <h3>Model Status</h3>
-            <div id="status-info" style="margin-top: 1rem; line-height: 2;"></div>
-            <div style="margin-top: 2rem;">
-                <button class="btn" onclick="startRetrain()">Retrain Model Now</button>
-                <div id="progress-container" style="display:none; margin-top: 1rem;">
-                    <div style="background: #334155; height: 20px; border-radius: 10px; overflow: hidden;">
-                        <div id="progress-bar" style="background: var(--accent-primary); height: 100%; width: 0%; transition: width 0.3s;"></div>
+    <div class="app-layout">
+        <aside class="admin-sidebar">
+            <div class="sidebar-header">
+                <svg viewBox="0 0 24 24" fill="var(--accent)" width="28" height="28"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
+                <span style="font-size:1.25rem; font-weight:700;">Admin</span>
+            </div>
+            <a href="/admin/dashboard" class="nav-item"><i>📊</i> Dashboard</a>
+            <a href="/admin/logs" class="nav-item"><i>📋</i> All Logs</a>
+            <a href="/admin/users" class="nav-item"><i>👥</i> Users</a>
+            <a href="/admin/model" class="nav-item active"><i>🧠</i> ML Model</a>
+            <div style="flex:1;"></div>
+            <a href="/admin/logout" class="nav-item" style="color:var(--danger);"><i>🚪</i> Logout</a>
+        </aside>
+
+        <main class="main-wrapper">
+            <header class="topbar">
+                <span style="font-weight:500;">ML Model Management</span>
+                <button class="theme-toggle" id="theme-toggle">🌙</button>
+            </header>
+
+            <div class="content">
+                <div class="page-header"><h1 class="page-title">Machine Learning Model</h1></div>
+
+                <div class="grid-3 mb-4">
+                    <div class="card" style="text-align:center;">
+                        <div class="card-header"><h2 class="card-title">Accuracy</h2></div>
+                        <div class="metric-ring" id="ring-acc" style="border-color: var(--success); color: var(--success);">—</div>
                     </div>
-                    <div id="progress-text" style="font-size: 0.8rem; text-align: center; margin-top: 0.5rem;"></div>
+                    <div class="card" style="text-align:center;">
+                        <div class="card-header"><h2 class="card-title">Precision</h2></div>
+                        <div class="metric-ring" id="ring-prec" style="border-color: var(--info); color: var(--info);">—</div>
+                    </div>
+                    <div class="card" style="text-align:center;">
+                        <div class="card-header"><h2 class="card-title">F1 Score</h2></div>
+                        <div class="metric-ring" id="ring-f1" style="border-color: var(--warning); color: var(--warning);">—</div>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header"><h2 class="card-title">Retrain</h2></div>
+                    <p class="text-muted mb-3" style="font-size:0.875rem;">Retrain the Random Forest model with the latest DNS traffic data.</p>
+                    <button class="btn" id="retrain-btn" onclick="retrain()">Retrain model now</button>
+                    <div id="retrain-msg" class="mt-3 text-muted" style="font-size:0.85rem;"></div>
                 </div>
             </div>
-        </div>
+        </main>
     </div>
+
     <script>
-        async function loadStatus() {
-            const res = await fetch('/admin/api/training-status');
-            if (res.ok) {
-                const data = await res.json();
-                
-                const info = document.getElementById('status-info');
-                info.innerHTML = `
-                    <div><strong>Accuracy:</strong> ${(data.accuracy * 100).toFixed(2)}%</div>
-                    <div><strong>Train Samples:</strong> ${data.train_samples}</div>
-                    <div><strong>Last Trained:</strong> ${data.last_trained ? new Date(data.last_trained).toLocaleString() : 'Never'}</div>
-                    <div><strong>Status:</strong> ${data.is_training ? '<span class="badge blue">Training</span>' : '<span class="badge green">Idle</span>'}</div>
-                `;
-                
-                const pCont = document.getElementById('progress-container');
-                const pBar = document.getElementById('progress-bar');
-                const pText = document.getElementById('progress-text');
-                
-                if (data.is_training) {
-                    pCont.style.display = 'block';
-                    pBar.style.width = data.progress + '%';
-                    pText.textContent = `Stage: ${data.stage} (${data.progress}%)`;
-                } else {
-                    pCont.style.display = 'none';
-                }
-            }
+        // Theme
+        (function(){
+            const btn=document.getElementById('theme-toggle'); const saved=localStorage.getItem('theme');
+            if(saved==='dark'||(!saved&&window.matchMedia('(prefers-color-scheme:dark)').matches)){document.documentElement.setAttribute('data-theme','dark');btn.textContent='☀️';}
+            btn.addEventListener('click',()=>{const d=document.documentElement.getAttribute('data-theme')==='dark';document.documentElement.setAttribute('data-theme',d?'light':'dark');localStorage.setItem('theme',d?'light':'dark');btn.textContent=d?'🌙':'☀️';});
+        })();
+
+        async function loadMetrics() {
+            try {
+                const r = await fetch('/dns_model_metrics.json');
+                if (!r.ok) return;
+                const m = await r.json();
+                const set = (id, val) => { const e = document.getElementById(id); if (e && val !== undefined) e.textContent = (val * 100).toFixed(1) + '%'; };
+                set('ring-acc', m.accuracy);
+                set('ring-prec', m.precision);
+                set('ring-f1', m.f1_score);
+            } catch {}
         }
-        
-        async function startRetrain() {
-            await fetch('/admin/api/retrain', {method: 'POST'});
-            loadStatus();
+        loadMetrics();
+
+        async function retrain() {
+            const btn = document.getElementById('retrain-btn');
+            const msg = document.getElementById('retrain-msg');
+            btn.innerHTML = '<span class="spinner"></span> Training…'; btn.disabled = true;
+            msg.textContent = '';
+            try {
+                const r = await fetch('/admin/api/retrain', {method: 'POST'});
+                if (r.ok) { msg.textContent = '✓ Model retrained successfully.'; msg.style.color = 'var(--success)'; loadMetrics(); }
+                else { msg.textContent = '✕ Retrain failed.'; msg.style.color = 'var(--danger)'; }
+            } catch { msg.textContent = '✕ Network error.'; msg.style.color = 'var(--danger)'; }
+            btn.innerHTML = 'Retrain model now'; btn.disabled = false;
         }
-        
-        setInterval(loadStatus, 2000);
-        document.addEventListener("DOMContentLoaded", loadStatus);
     </script>
 </body>
 </html>

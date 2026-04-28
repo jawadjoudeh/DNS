@@ -2,64 +2,111 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Admin Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard – SecureDNS Guard</title>
+        <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
     <link rel="stylesheet" href="/assets/css/style.css">
+    <style>
+        .admin-sidebar { width: 250px; background: var(--bg-sidebar); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 1.5rem 0; }
+        .admin-sidebar .sidebar-header { padding: 0 1.5rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.75rem; }
+        .admin-sidebar .nav-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1.5rem; color: var(--text-primary); font-weight: 500; border-left: 3px solid transparent; }
+        .admin-sidebar .nav-item:hover { background: rgba(0,0,0,0.03); }
+        .admin-sidebar .nav-item.active { background: rgba(93,185,118,0.08); color: var(--accent); border-left-color: var(--accent); }
+        .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: #fff; animation: spin 1s linear infinite; vertical-align: middle; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
 </head>
 <body>
-    <nav class="navbar">
-        <div class="brand">Admin Panel</div>
-        <div class="nav-links">
-            <a href="/admin/dashboard" style="color: white;">Dashboard</a>
-            <a href="/admin/users">Users</a>
-            <a href="/admin/logs">Logs</a>
-            <a href="/admin/model">ML Model</a>
-            <a href="/admin/logout">Logout</a>
-        </div>
-    </nav>
-    <div class="container">
-        <div class="grid" style="margin-bottom: 2rem;" id="top-stats">
-            <div class="card kpi-card"><h3>Total Users</h3><div class="value" id="ad-users">0</div></div>
-            <div class="card kpi-card"><h3>Total Queries</h3><div class="value" id="ad-queries">0</div></div>
-            <div class="card kpi-card"><h3>Threats Blocked</h3><div class="value" id="ad-blocked" style="color: var(--danger);">0</div></div>
-            <div class="card kpi-card"><h3>Accuracy</h3><div class="value" id="ad-acc">0%</div></div>
-        </div>
-        
-        <div class="card">
-            <h3>Recent Attacks Feed (All Users)</h3>
-            <table style="margin-top: 1rem;">
-                <thead><tr><th>Time</th><th>User</th><th>Domain</th><th>Attack Type</th><th>Conf</th></tr></thead>
-                <tbody id="ad-feed"></tbody>
-            </table>
-        </div>
+    <div class="app-layout">
+        <aside class="admin-sidebar">
+            <div class="sidebar-header">
+                <svg viewBox="0 0 24 24" fill="var(--accent)" width="28" height="28"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
+                <span style="font-size:1.25rem; font-weight:700; color:var(--text-primary);">Admin</span>
+            </div>
+            <a href="/admin/dashboard" class="nav-item active"><i>📊</i> Dashboard</a>
+            <a href="/admin/logs" class="nav-item"><i>📋</i> All Logs</a>
+            <a href="/admin/users" class="nav-item"><i>👥</i> Users</a>
+            <a href="/admin/model" class="nav-item"><i>🧠</i> ML Model</a>
+            <div style="flex:1;"></div>
+            <a href="/admin/logout" class="nav-item" style="color:var(--danger);"><i>🚪</i> Logout</a>
+        </aside>
+
+        <main class="main-wrapper">
+            <header class="topbar">
+                <span style="font-weight:500;">Admin Console</span>
+                <button class="theme-toggle" id="theme-toggle">🌙</button>
+            </header>
+
+            <div class="content">
+                <div class="page-header"><h1 class="page-title">System Overview</h1></div>
+
+                <div class="grid-4 mb-4">
+                    <div class="card stat-card"><div class="stat-title">Total Users</div><div class="stat-value blue skeleton" id="s-users">0</div></div>
+                    <div class="card stat-card"><div class="stat-title">Total Queries</div><div class="stat-value skeleton" id="s-queries" style="color:var(--info);">0</div></div>
+                    <div class="card stat-card"><div class="stat-title">Blocked</div><div class="stat-value red skeleton" id="s-blocked">0</div></div>
+                    <div class="card stat-card"><div class="stat-title">Model Accuracy</div><div class="stat-value yellow skeleton" id="s-acc">0%</div></div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header"><h2 class="card-title">DNS proxy</h2></div>
+                    <div class="d-flex align-items-center gap-3">
+                        <span id="proxy-dot" style="width:10px;height:10px;border-radius:50%;background:var(--text-secondary);display:inline-block;"></span>
+                        <span id="proxy-state">—</span>
+                        <button id="btn-start" class="btn" style="padding:0.35rem 0.75rem;" onclick="ctrl('start')">Start</button>
+                        <button id="btn-stop" class="btn danger" style="padding:0.35rem 0.75rem;" onclick="ctrl('stop')">Stop</button>
+                    </div>
+                </div>
+            </div>
+        </main>
     </div>
+
     <script>
-        async function fetchAdminData() {
-            const res = await fetch('/admin/api/overview');
-            if (res.ok) {
-                const data = await res.json();
-                document.getElementById('ad-users').textContent = data.total_users;
-                document.getElementById('ad-queries').textContent = data.total_queries;
-                document.getElementById('ad-blocked').textContent = data.total_blocked;
-                document.getElementById('ad-acc').textContent = (data.model_accuracy*100).toFixed(1)+'%';
+        // Theme
+        (function(){
+            const btn = document.getElementById('theme-toggle');
+            const saved = localStorage.getItem('theme');
+            if (saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.setAttribute('data-theme','dark'); btn.textContent='☀️';
             }
-            const lRes = await fetch('/admin/api/all-logs');
-            if (lRes.ok) {
-                const logs = await lRes.json();
-                const tb = document.getElementById('ad-feed');
-                tb.innerHTML = '';
-                logs.filter(l => l.action_taken === 'Blocked').slice(0, 10).forEach(l => {
-                    tb.innerHTML += `<tr>
-                        <td>${new Date(l.timestamp).toLocaleTimeString()}</td>
-                        <td>${l.username || 'System'}</td>
-                        <td>${l.domain_name}</td>
-                        <td><span class="badge red">${l.attack_type || 'Unknown'}</span></td>
-                        <td>${(l.confidence*100).toFixed(1)}%</td>
-                    </tr>`;
-                });
-            }
+            btn.addEventListener('click', () => {
+                const d = document.documentElement.getAttribute('data-theme') === 'dark';
+                document.documentElement.setAttribute('data-theme', d?'light':'dark');
+                localStorage.setItem('theme', d?'light':'dark'); btn.textContent = d?'🌙':'☀️';
+            });
+        })();
+
+        // Overview
+        async function loadOverview() {
+            try {
+                const r = await fetch('/admin/api/overview'); if (!r.ok) return;
+                const d = await r.json();
+                const set = (id,v) => { const e=document.getElementById(id); if(e){e.classList.remove('skeleton');e.textContent=v;} };
+                set('s-users', d.total_users);
+                set('s-queries', d.total_queries.toLocaleString());
+                set('s-blocked', d.total_blocked.toLocaleString());
+                set('s-acc', (d.model_accuracy*100).toFixed(1)+'%');
+            } catch {}
         }
-        setInterval(fetchAdminData, 5000);
-        fetchAdminData();
+        loadOverview(); setInterval(loadOverview, 10000);
+
+        // Proxy
+        async function pollProxy() {
+            try {
+                const r = await fetch('/api/proxy/status'); if (!r.ok) return;
+                const s = await r.json();
+                const dot = document.getElementById('proxy-dot');
+                const text = document.getElementById('proxy-state');
+                if (s.running) { dot.style.background='var(--success)'; text.textContent='Running'; document.getElementById('btn-start').disabled=true; document.getElementById('btn-stop').disabled=false; }
+                else { dot.style.background='var(--danger)'; text.textContent='Stopped'; document.getElementById('btn-start').disabled=false; document.getElementById('btn-stop').disabled=true; }
+            } catch {}
+        }
+        pollProxy(); setInterval(pollProxy, 5000);
+
+        async function ctrl(action) {
+            const btn = document.getElementById(`btn-${action}`); btn.disabled=true;
+            await fetch('/api/proxy/control',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action})});
+            pollProxy();
+        }
     </script>
 </body>
 </html>

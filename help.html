@@ -2,11 +2,94 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Help - SecureDNS Guard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Help – SecureDNS Guard</title>
+    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
     <link rel="stylesheet" href="/assets/css/style.css">
+    <style>
+        .faq-item {
+            padding: 1.25rem; margin-bottom: 0.75rem;
+            background: var(--bg-card); border: 1px solid var(--border-color);
+            border-radius: var(--border-radius-sm); cursor: pointer;
+            transition: all 0.2s;
+        }
+        .faq-item:hover { border-color: var(--accent); box-shadow: var(--shadow-md); }
+        .faq-q { font-weight: 700; font-size: 0.95rem; display: flex; justify-content: space-between; align-items: center; }
+        .faq-q .icon { color: var(--text-secondary); transition: transform 0.2s; font-size: 1.2rem; }
+        .faq-item.open .faq-q .icon { transform: rotate(45deg); color: var(--accent); }
+        .faq-a { color: var(--text-secondary); line-height: 1.8; font-size: 0.9rem; max-height: 0; overflow: hidden; transition: max-height 0.3s ease, margin-top 0.3s ease; }
+        .faq-item.open .faq-a { max-height: 300px; margin-top: 1rem; }
+        .help-category { font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-secondary); margin: 2rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border-color); }
+        .help-category:first-of-type { margin-top: 0; }
+    </style>
 </head>
 <body>
-    <nav class="navbar"><div class="brand">SecureDNS Guard</div><div class="nav-links"><a href="/dashboard.html">Dashboard</a></div></nav>
-    <div class="container"><div class="card"><h3>Help Center</h3><p>Contact admin@network.local for support.</p></div></div>
+    <div class="app-layout">
+        <aside class="sidebar" id="sidebar"></aside>
+        <div class="sidebar-overlay"></div>
+        <main class="main-wrapper">
+            <header class="topbar" id="topbar"></header>
+            <div class="content">
+                <div class="page-header"><h1 class="page-title">Help & FAQ</h1></div>
+
+                <div class="help-category">General</div>
+
+                <div class="faq-item open" onclick="this.classList.toggle('open')">
+                    <div class="faq-q">What is SecureDNS Guard? <span class="icon">+</span></div>
+                    <div class="faq-a">SecureDNS Guard is a DNS-level security proxy. It intercepts outgoing DNS requests, runs them through a Machine Learning model (Random Forest) to detect threats like Domain Generation Algorithms (DGA) and DNS Tunneling, and blocks malicious queries in real time. Safe queries are forwarded securely via DNS-over-HTTPS.</div>
+                </div>
+
+                <div class="faq-item" onclick="this.classList.toggle('open')">
+                    <div class="faq-q">How does the ML detection work? <span class="icon">+</span></div>
+                    <div class="faq-a">For every DNS query the engine extracts 10 lexical features (entropy, domain length, digit ratio, etc.) and feeds them into a pre-trained Random Forest classifier. If the predicted malicious confidence exceeds the configured threshold, the query is blocked with an NXDOMAIN response.</div>
+                </div>
+
+                <div class="faq-item" onclick="this.classList.toggle('open')">
+                    <div class="faq-q">What is DNS-over-HTTPS (DoH)? <span class="icon">+</span></div>
+                    <div class="faq-a">DoH encrypts your DNS queries inside HTTPS so that your ISP or anyone on the network cannot see which domains you visit. SecureDNS Guard forwards all "safe" queries through DoH providers like Cloudflare, Google, or Quad9.</div>
+                </div>
+
+                <div class="help-category">Configuration</div>
+
+                <div class="faq-item" onclick="this.classList.toggle('open')">
+                    <div class="faq-q">How do I change the detection sensitivity? <span class="icon">+</span></div>
+                    <div class="faq-a">Go to <a href="/settings.html">Settings</a> and adjust the blocking threshold slider. A lower value (e.g. 70%) blocks more aggressively while a higher value (e.g. 95%) is more conservative, allowing more queries through.</div>
+                </div>
+
+                <div class="faq-item" onclick="this.classList.toggle('open')">
+                    <div class="faq-q">Where can I see blocked queries? <span class="icon">+</span></div>
+                    <div class="faq-a">The <a href="/threat_logs.html">Query Log</a> page shows every DNS query processed by SecureDNS Guard. You can filter by verdict (blocked/safe), attack type (DGA/tunneling), confidence level, and date range. Click "Explain" on any row to see the ML features.</div>
+                </div>
+
+                <div class="help-category">API & Integration</div>
+
+                <div class="faq-item" onclick="this.classList.toggle('open')">
+                    <div class="faq-q">How do I use the API? <span class="icon">+</span></div>
+                    <div class="faq-a">Generate an API key on the <a href="/profile.html">API Keys</a> page, then send POST requests to <code>/api/v1/check</code> with your key in the <code>X-API-Key</code> header. Full details and code examples are on the <a href="/api.html">Setup Guide</a> page.</div>
+                </div>
+
+                <div class="faq-item" onclick="this.classList.toggle('open')">
+                    <div class="faq-q">What are the rate limits? <span class="icon">+</span></div>
+                    <div class="faq-a">Free plan: 100 API queries per day with 1 key. Pro plan: 10,000 queries per day with up to 5 keys. Rate limits reset daily at midnight UTC. The admin can upgrade plans from the admin panel.</div>
+                </div>
+
+                <div class="faq-item" onclick="this.classList.toggle('open')">
+                    <div class="faq-q">How do I set up the DNS proxy on a client? <span class="icon">+</span></div>
+                    <div class="faq-a">Go to your <a href="/profile.html">Profile</a> page and click "Download dns_proxy.py". The script comes pre-configured with your API key. Run it with administrator/root privileges on the client machine: <code>python dns_proxy.py</code>. It will intercept DNS queries on port 53.</div>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="/assets/js/main.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", async () => {
+            const me = await checkAuth();
+            if (me) {
+                document.getElementById('sidebar').innerHTML = renderSidebar(me.is_admin);
+                document.getElementById('topbar').innerHTML = renderTopbar(me);
+                setActiveNavLink(); initMobileMenu(); initThemeToggle();
+            }
+        });
+    </script>
 </body>
 </html>

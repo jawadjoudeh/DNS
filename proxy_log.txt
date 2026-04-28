@@ -19,3 +19,163 @@
 [2026-04-20 13:01:49] FORWARDED: wpad.ju.edu.jo
 [2026-04-20 13:01:51] WARNING: API unreachable - pass-through for wpad.ju.edu.jo
 [2026-04-20 13:01:51] FORWARDED: wpad.ju.edu.jo
+[2026-04-24 01:12:34] Proxy started on port 53...
+[2026-04-24 01:12:57] WARNING: API unreachable - pass-through for antigravity-unleash.goog
+[2026-04-24 01:12:57] FORWARDED: antigravity-unleash.goog
+[2026-04-24 01:13:00] WARNING: API unreachable - pass-through for your_server_url.home
+[2026-04-24 01:13:00] FORWARDED: your_server_url.home
+[2026-04-24 01:13:03] WARNING: API unreachable - pass-through for your_server_url.home
+[2026-04-24 01:13:03] FORWARDED: your_server_url.home
+[2026-04-24 01:13:05] WARNING: API unreachable - pass-through for antigravity-unleash.goog
+[2026-04-24 01:13:05] FORWARDED: antigravity-unleash.goog
+[2026-04-24 01:13:08] WARNING: API unreachable - pass-through for antigravity-unleash.goog
+[2026-04-24 01:13:08] FORWARDED: antigravity-unleash.goog
+[2026-04-24 01:13:11] WARNING: API unreachable - pass-through for antigravity-unleash.goog
+[2026-04-24 01:13:11] FORWARDED: antigravity-unleash.goog
+[2026-04-24 01:13:18] WARNING: API unreachable - pass-through for your_server_url.home
+[2026-04-24 01:13:18] FORWARDED: your_server_url.home
+[2026-04-24 01:13:21] WARNING: API unreachable - pass-through for your_server_url.home
+[2026-04-24 01:13:21] FORWARDED: your_server_url.home
+[2026-04-24 01:13:24] WARNING: API unreachable - pass-through for content-autofill.googleapis.com
+[2026-04-24 01:13:24] FORWARDED: content-autofill.googleapis.com
+[2026-04-24 01:13:26] WARNING: API unreachable - pass-through for content-autofill.googleapis.com
+[2026-04-24 01:13:26] FORWARDED: content-autofill.googleapis.com
+[2026-04-24 01:13:29] WARNING: API unreachable - pass-through for android.clients.google.com
+[2026-04-24 01:13:29] FORWARDED: android.clients.google.com
+[2026-04-24 01:13:32] WARNING: API unreachable - pass-through for android.clients.google.com
+[2026-04-24 01:13:32] FORWARDED: android.clients.google.com
+[2026-04-24 01:13:39] WARNING: API unreachable - pass-through for android.clients.google.com
+[2026-04-24 01:13:39] FORWARDED: android.clients.google.com
+[2026-04-24 01:13:42] WARNING: API unreachable - pass-through for android.clients.google.com
+[2026-04-24 01:13:42] FORWARDED: android.clients.google.com
+[2026-04-24 01:13:44] WARNING: API unreachable - pass-through for your_server_url.home
+[2026-04-24 01:13:44] FORWARDED: your_server_url.home
+[2026-04-24 01:13:47] WARNING: API unreachable - pass-through for your_server_url.home
+[2026-04-24 01:13:47] FORWARDED: your_server_url.home
+[2026-04-24 01:13:50] WARNING: API unreachable - pass-through for your_server_url.home
+[2026-04-24 01:13:50] FORWARDED: your_server_url.home
+[2026-04-24 01:13:52] WARNING: API unreachable - pass-through for your_server_url.home
+[2026-04-24 01:13:52] FORWARDED: your_server_url.home
+[2026-04-24 01:14:00] WARNING: API unreachable - pass-through for your_server_url.home
+[2026-04-24 01:14:00] FORWARDED: your_server_url.home
+[2026-04-24 01:14:02] WARNING: API unreachable - pass-through for your_server_url.home
+[2026-04-24 01:14:02] FORWARDED: your_server_url.home
+[2026-04-24 01:14:05] WARNING: API unreachable - pass-through for your_server_url.home
+[2026-04-24 01:14:05] FORWARDED: your_server_url.home
+[2026-04-24 01:14:08] WARNING: API unreachable - pass-through for your_server_url.home
+[2026-04-24 01:14:08] FORWARDED: your_server_url.home
+[2026-04-24 01:14:10] WARNING: API unreachable - pass-through for daily-cloudcode-pa.googleapis.com
+[2026-04-24 01:14:10] FORWARDED: daily-cloudcode-pa.googleapis.com
+[2026-04-24 01:14:13] WARNING: API unreachable - pass-through for browser.events.data.microsoft.com
+[2026-04-24 01:14:13] FORWARDED: browser.events.data.microsoft.com
+[2026-04-24 01:14:20] WARNING: API unreachable - pass-through for browser.events.data.microsoft.com
+[2026-04-24 01:14:20] FORWARDED: browser.events.data.microsoft.com
+[2026-04-24 01:14:23] WARNING: API unreachable - pass-through for daily-cloudcode-pa.googleapis.com
+[2026-04-24 01:14:23] FORWARDED: daily-cloudcode-pa.googleapis.com
+[2026-04-24 01:14:26] WARNING: API unreachable - pass-through for daily-cloudcode-pa.googleapis.com
+[2026-04-24 01:14:26] FORWARDED: daily-cloudcode-pa.googleapis.com
+[2026-04-24 01:14:28] WARNING: API unreachable - pass-through for daily-cloudcode-pa.googleapis.com
+[2026-04-24 01:14:28] FORWARDED: daily-cloudcode-pa.googleapis.com
+[2026-04-24 01:14:31] WARNING: API unreachable - pass-through for browser.events.data.microsoft.com
+[2026-04-24 01:14:31] FORWARDED: browser.events.data.microsoft.com
+[2026-04-24 01:14:34] WARNING: API unreachable - pass-through for browser.events.data.microsoft.com
+[2026-04-24 01:14:34] FORWARDED: browser.events.data.microsoft.com
+[2026-04-24 01:14:41] WARNING: API unreachable - pass-through for your_server_url.home
+[2026-04-24 01:14:41] FORWARDED: your_server_url.home
+[2026-04-24 01:14:44] WARNING: API unreachable - pass-through for your_server_url.home
+[2026-04-24 01:14:44] FORWARDED: your_server_url.home
+[2026-04-24 01:14:46] WARNING: API unreachable - pass-through for your_server_url.home
+[2026-04-24 01:14:46] FORWARDED: your_server_url.home
+[2026-04-24 01:14:49] WARNING: API unreachable - pass-through for your_server_url.home
+[2026-04-24 01:14:49] FORWARDED: your_server_url.home
+[2026-04-24 01:14:52] WARNING: API unreachable - pass-through for your_server_url.home
+[2026-04-24 01:14:52] FORWARDED: your_server_url.home
+[2026-04-24 01:14:54] WARNING: API unreachable - pass-through for your_server_url.home
+[2026-04-24 01:14:54] FORWARDED: your_server_url.home
+[2026-04-24 01:15:02] WARNING: API unreachable - pass-through for your_server_url.home
+[2026-04-24 01:15:02] FORWARDED: your_server_url.home
+[2026-04-24 01:45:10] Proxy started on port 53...
+[2026-04-24 01:45:23] WARNING: API unreachable - pass-through for www.google.com
+[2026-04-24 01:45:23] FORWARDED: www.google.com
+[2026-04-24 01:45:26] WARNING: API unreachable - pass-through for www.google.com
+[2026-04-24 01:45:26] FORWARDED: www.google.com
+[2026-04-24 01:45:28] WARNING: API unreachable - pass-through for www.bing.com
+[2026-04-24 01:45:28] FORWARDED: www.bing.com
+[2026-04-24 01:45:31] WARNING: API unreachable - pass-through for www.bing.com
+[2026-04-24 01:45:31] FORWARDED: www.bing.com
+[2026-04-24 01:45:34] WARNING: API unreachable - pass-through for www.google.com
+[2026-04-24 01:45:34] FORWARDED: www.google.com
+[2026-04-24 01:45:36] WARNING: API unreachable - pass-through for your_server_url.home
+[2026-04-24 01:45:36] FORWARDED: your_server_url.home
+[2026-04-24 01:45:44] WARNING: API unreachable - pass-through for your_server_url.home
+[2026-04-24 01:45:44] FORWARDED: your_server_url.home
+[2026-04-24 01:45:46] WARNING: API unreachable - pass-through for www.google.com
+[2026-04-24 01:45:46] FORWARDED: www.google.com
+[2026-04-24 01:45:49] WARNING: API unreachable - pass-through for www.bing.com
+[2026-04-24 01:45:49] FORWARDED: www.bing.com
+[2026-04-24 01:45:52] WARNING: API unreachable - pass-through for www.bing.com
+[2026-04-24 01:45:52] FORWARDED: www.bing.com
+[2026-04-24 01:45:54] WARNING: API unreachable - pass-through for your_server_url.home
+[2026-04-24 01:45:54] FORWARDED: your_server_url.home
+[2026-04-24 01:45:57] WARNING: API unreachable - pass-through for your_server_url.home
+[2026-04-24 01:45:57] FORWARDED: your_server_url.home
+[2026-04-24 01:46:04] WARNING: API unreachable - pass-through for fonts.googleapis.com
+[2026-04-24 01:46:04] FORWARDED: fonts.googleapis.com
+[2026-04-24 01:46:07] WARNING: API unreachable - pass-through for fonts.googleapis.com
+[2026-04-24 01:46:07] FORWARDED: fonts.googleapis.com
+[2026-04-24 01:46:10] WARNING: API unreachable - pass-through for cdn.jsdelivr.net
+[2026-04-24 01:46:10] FORWARDED: cdn.jsdelivr.net
+[2026-04-24 01:46:12] WARNING: API unreachable - pass-through for cdn.jsdelivr.net
+[2026-04-24 01:46:12] FORWARDED: cdn.jsdelivr.net
+[2026-04-24 01:46:15] WARNING: API unreachable - pass-through for fonts.googleapis.com
+[2026-04-24 01:46:15] FORWARDED: fonts.googleapis.com
+[2026-04-24 01:46:18] WARNING: API unreachable - pass-through for fonts.googleapis.com
+[2026-04-24 01:46:18] FORWARDED: fonts.googleapis.com
+[2026-04-24 01:46:25] WARNING: API unreachable - pass-through for cdn.jsdelivr.net
+[2026-04-24 01:46:25] FORWARDED: cdn.jsdelivr.net
+[2026-04-24 01:46:28] WARNING: API unreachable - pass-through for cdn.jsdelivr.net
+[2026-04-24 01:46:28] FORWARDED: cdn.jsdelivr.net
+[2026-04-24 01:46:30] WARNING: API unreachable - pass-through for edge.microsoft.com
+[2026-04-24 01:46:30] FORWARDED: edge.microsoft.com
+[2026-04-24 01:46:33] WARNING: API unreachable - pass-through for edge.microsoft.com
+[2026-04-24 01:46:33] FORWARDED: edge.microsoft.com
+[2026-04-24 01:46:36] WARNING: API unreachable - pass-through for your_server_url.home
+[2026-04-24 01:46:36] FORWARDED: your_server_url.home
+[2026-04-24 01:46:38] WARNING: API unreachable - pass-through for your_server_url.home
+[2026-04-24 01:46:38] FORWARDED: your_server_url.home
+[2026-04-24 01:46:46] WARNING: API unreachable - pass-through for your_server_url.home
+[2026-04-24 01:46:46] FORWARDED: your_server_url.home
+[2026-04-24 01:46:48] WARNING: API unreachable - pass-through for your_server_url.home
+[2026-04-24 01:46:48] FORWARDED: your_server_url.home
+[2026-04-24 01:46:51] WARNING: API unreachable - pass-through for your_server_url.home
+[2026-04-24 01:46:51] FORWARDED: your_server_url.home
+[2026-04-24 01:46:54] WARNING: API unreachable - pass-through for your_server_url.home
+[2026-04-24 01:46:54] FORWARDED: your_server_url.home
+[2026-04-24 01:46:57] WARNING: API unreachable - pass-through for your_server_url.home
+[2026-04-24 01:46:57] FORWARDED: your_server_url.home
+[2026-04-24 01:46:59] WARNING: API unreachable - pass-through for your_server_url.home
+[2026-04-24 01:46:59] FORWARDED: your_server_url.home
+[2026-04-24 01:47:07] WARNING: API unreachable - pass-through for your_server_url.home
+[2026-04-24 01:47:07] FORWARDED: your_server_url.home
+[2026-04-24 01:47:09] WARNING: API unreachable - pass-through for your_server_url.home
+[2026-04-24 01:47:09] FORWARDED: your_server_url.home
+[2026-04-24 01:47:12] WARNING: API unreachable - pass-through for your_server_url.home
+[2026-04-24 01:47:12] FORWARDED: your_server_url.home
+[2026-04-24 01:47:15] WARNING: API unreachable - pass-through for your_server_url.home
+[2026-04-24 01:47:15] FORWARDED: your_server_url.home
+[2026-04-24 01:47:17] WARNING: API unreachable - pass-through for antigravity-unleash.goog
+[2026-04-24 01:47:17] FORWARDED: antigravity-unleash.goog
+[2026-04-24 01:47:20] WARNING: API unreachable - pass-through for antigravity-unleash.goog
+[2026-04-24 01:47:20] FORWARDED: antigravity-unleash.goog
+[2026-04-24 01:47:27] WARNING: API unreachable - pass-through for your_server_url.home
+[2026-04-24 01:47:27] FORWARDED: your_server_url.home
+[2026-04-24 01:47:30] WARNING: API unreachable - pass-through for your_server_url.home
+[2026-04-24 01:47:30] FORWARDED: your_server_url.home
+[2026-04-24 01:47:33] WARNING: API unreachable - pass-through for your_server_url.home
+[2026-04-24 01:47:33] FORWARDED: your_server_url.home
+[2026-04-24 01:47:35] WARNING: API unreachable - pass-through for your_server_url.home
+[2026-04-24 01:47:35] FORWARDED: your_server_url.home
+[2026-04-24 01:47:38] WARNING: API unreachable - pass-through for your_server_url.home
+[2026-04-24 01:47:38] FORWARDED: your_server_url.home
+[2026-04-24 01:47:41] WARNING: API unreachable - pass-through for your_server_url.home
+[2026-04-24 01:47:41] FORWARDED: your_server_url.home

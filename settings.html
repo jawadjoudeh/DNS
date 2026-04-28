@@ -2,251 +2,270 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Settings - SecureDNS Guard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings – SecureDNS Guard</title>
+        <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
     <link rel="stylesheet" href="/assets/css/style.css">
     <style>
-        .slider-container { margin: 1.5rem 0; }
-        .presets { display: flex; gap: 0.5rem; margin-top: 1rem; }
-        .preset-btn { flex: 1; padding: 0.5rem; background: var(--bg-primary); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 6px; cursor: pointer; text-align: center; font-size: 0.875rem; }
-        .preset-btn:hover { border-color: var(--accent); }
-        .preset-btn.active { background: rgba(99, 102, 241, 0.2); border-color: var(--accent); color: var(--accent); }
-        .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: #fff; animation: spin 1s ease-in-out infinite; margin-right: 5px; vertical-align: middle; }
+        .setting-group { margin-bottom: 2rem; }
+        .setting-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 2rem; padding: 1.25rem 0; border-bottom: 1px solid var(--border-color); }
+        .setting-row:last-child { border-bottom: none; }
+        .setting-label { font-weight: 600; margin-bottom: 0.25rem; }
+        .setting-desc { color: var(--text-secondary); font-size: 0.85rem; line-height: 1.5; }
+        .setting-control { flex-shrink: 0; min-width: 200px; text-align: right; }
+
+        .toggle-switch { position: relative; width: 44px; height: 24px; display: inline-block; }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .toggle-slider { position: absolute; inset: 0; background: var(--border-color); border-radius: 24px; cursor: pointer; transition: 0.2s; }
+        .toggle-slider::before { content: ''; position: absolute; width: 18px; height: 18px; left: 3px; top: 3px; background: white; border-radius: 50%; transition: 0.2s; }
+        .toggle-switch input:checked + .toggle-slider { background: var(--accent); }
+        .toggle-switch input:checked + .toggle-slider::before { transform: translateX(20px); }
+
+        .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: #fff; animation: spin 1s linear infinite; vertical-align: middle; margin-right: 0.5rem; }
         @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
-    <div class="app-container">
-        <aside class="sidebar">
-            <div class="brand">🛡️ SecureDNS</div>
-            <a href="/dashboard.html" class="nav-item">Dashboard</a>
-            <a href="/threat_logs.html" class="nav-item">Threat Logs</a>
-            <a href="/profile.html" class="nav-item">API Keys</a>
-            <a href="/settings.html" class="nav-item">Settings</a>
-            <a href="/logout" class="nav-item" style="margin-top: auto; color: var(--danger);">Logout</a>
-        </aside>
-        
+    <div class="app-layout">
+        <aside class="sidebar" id="sidebar"></aside>
         <div class="sidebar-overlay"></div>
 
-        <main class="main-content">
-            <header class="top-header">
-                <button class="hamburger-btn">☰</button>
-                <h2>Settings</h2>
-            </header>
+        <main class="main-wrapper">
+            <header class="topbar" id="topbar"></header>
 
-            <div class="content-area">
-                <div class="grid-2" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 1.5rem;">
-                    
-                    <div class="card" id="proxy-card" style="display:none;">
-                        <h3>DNS Proxy Status</h3>
-                        <div id="proxy-status-display" style="margin: 1.5rem 0; padding: 1rem; background: var(--bg-primary); border-radius: 8px; display: flex; align-items: center; gap: 1rem;">
-                            <div id="proxy-dot" style="width:12px; height:12px; border-radius:50%; background:var(--text-secondary);"></div>
-                            <div style="flex:1;">
-                                <strong id="proxy-state-text">Checking status...</strong>
-                                <div id="proxy-meta" style="font-size:0.875rem; color:var(--text-secondary); margin-top:0.25rem;"></div>
+            <div class="content">
+                <div class="page-header"><h1 class="page-title">Settings</h1></div>
+
+                <!-- Admin-only: Proxy status -->
+                <div class="card mb-4" id="proxy-card" style="display:none;">
+                    <div class="card-header"><h2 class="card-title">DNS protection</h2></div>
+                    <div class="setting-row">
+                        <div>
+                            <div class="setting-label">DNS Proxy Service</div>
+                            <div class="setting-desc">Controls the local DNS interception daemon on port 53.</div>
+                            <div class="mt-2" id="proxy-meta" class="text-muted" style="font-size:0.8rem;"></div>
+                        </div>
+                        <div class="setting-control d-flex gap-2 align-items-center">
+                            <span id="proxy-dot" style="width:10px;height:10px;border-radius:50%;background:var(--text-secondary);display:inline-block;"></span>
+                            <span id="proxy-state-text" style="margin-right:1rem;">—</span>
+                            <button id="btn-start-proxy" class="btn" style="padding:0.35rem 0.75rem;font-size:0.85rem;" onclick="controlProxy('start')">Start</button>
+                            <button id="btn-stop-proxy" class="btn danger" style="padding:0.35rem 0.75rem;font-size:0.85rem;" onclick="controlProxy('stop')">Stop</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Protection settings -->
+                <div class="card mb-4">
+                    <div class="card-header"><h2 class="card-title">DNS settings</h2></div>
+
+                    <div class="setting-row">
+                        <div>
+                            <div class="setting-label">Blocking threshold</div>
+                            <div class="setting-desc">Domains with ML confidence above this level are blocked. Lower = more aggressive.</div>
+                            <div class="mt-2" id="threshold-val-text" style="font-weight:600; color: var(--accent);">85%</div>
+                        </div>
+                        <div class="setting-control">
+                            <input type="range" id="threshold-slider" min="50" max="99" value="85" step="1" style="margin:0; width:100%;">
+                        </div>
+                    </div>
+
+                    <div class="setting-row">
+                        <div>
+                            <div class="setting-label">Auto-block malicious domains</div>
+                            <div class="setting-desc">When enabled, queries classified as malicious by the model are immediately blocked.</div>
+                        </div>
+                        <div class="setting-control">
+                            <label class="toggle-switch"><input type="checkbox" id="toggle-autoblock"><span class="toggle-slider"></span></label>
+                        </div>
+                    </div>
+
+                    <div class="setting-row">
+                        <div>
+                            <div class="setting-label">Auto-retrain model</div>
+                            <div class="setting-desc">Periodically retrain the ML model with new traffic data.</div>
+                        </div>
+                        <div class="setting-control">
+                            <label class="toggle-switch"><input type="checkbox" id="toggle-retrain"><span class="toggle-slider"></span></label>
+                        </div>
+                    </div>
+
+                    <div class="setting-row">
+                        <div>
+                            <div class="setting-label">Upstream DNS-over-HTTPS provider</div>
+                            <div class="setting-desc">Safe queries are forwarded to this encrypted DNS provider.</div>
+                        </div>
+                        <div class="setting-control">
+                            <select id="doh-provider" style="margin:0; width:100%;">
+                                <option value="cloudflare">Cloudflare (1.1.1.1)</option>
+                                <option value="google">Google (8.8.8.8)</option>
+                                <option value="quad9">Quad9 (9.9.9.9)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Admin-only: Blacklist + Retrain -->
+                <div id="admin-extra" style="display:none;">
+                    <div class="grid-2 mb-4">
+                        <div class="card">
+                            <div class="card-header"><h2 class="card-title">Custom filtering rules</h2></div>
+                            <div class="d-flex gap-2 mb-3">
+                                <input type="text" id="bl-domain" placeholder="malware.example.com" style="margin:0; flex:1;">
+                                <button class="btn" onclick="addBlacklist()" style="white-space:nowrap;">Add rule</button>
+                            </div>
+                            <div class="table-responsive" style="margin:0;">
+                                <table id="bl-table">
+                                    <thead><tr><th style="background:transparent;">Domain</th><th style="width:80px; background:transparent;">Action</th></tr></thead>
+                                    <tbody></tbody>
+                                </table>
                             </div>
                         </div>
-                        <div style="display:flex; gap:1rem;">
-                            <button id="btn-start-proxy" class="btn" style="flex:1; background:var(--success);" onclick="controlProxy('start')">▶ Start Proxy</button>
-                            <button id="btn-stop-proxy" class="btn danger" style="flex:1;" onclick="controlProxy('stop')">■ Stop Proxy</button>
+                        <div class="card">
+                            <div class="card-header"><h2 class="card-title">ML model</h2></div>
+                            <p class="text-muted mb-3" style="font-size:0.875rem;">Manually trigger a full retrain of the Random Forest model with the latest traffic data.</p>
+                            <button class="btn outline" id="retrain-btn" onclick="retrainModel()">Retrain model now</button>
                         </div>
-                        <p style="font-size:0.8rem; color:var(--text-secondary); margin-top:1rem;">
-                            ⚠️ Requires Administrator/root privileges on the server. The proxy listens on UDP port 53.
-                        </p>
                     </div>
+                </div>
 
-                    <div class="card">
-                        <h3>Detection Threshold</h3>
-                        <div class="slider-container">
-                            <input type="range" id="threshold-slider" min="50" max="99" value="85" step="1">
-                            <div style="font-weight:bold; margin-top:0.5rem; display:flex; justify-content:space-between;">
-                                <span id="threshold-val-text">Current: 85% confidence required to block</span>
-                                <span id="threshold-desc" style="color:var(--text-secondary); font-weight:normal; font-size:0.875rem;">Recommended. Best accuracy/safety balance.</span>
-                            </div>
-                        </div>
-                        <div class="presets">
-                            <button class="preset-btn" onclick="setThreshold(70, this)">Conservative 70%</button>
-                            <button class="preset-btn active" onclick="setThreshold(85, this)">Balanced 85%</button>
-                            <button class="preset-btn" onclick="setThreshold(95, this)">Aggressive 95%</button>
-                        </div>
-                    </div>
-
-                    <div class="card">
-                        <h3>Manual Blacklist</h3>
-                        <div style="display:flex; gap: 1rem; margin-bottom: 1rem;">
-                            <input type="text" id="bl-domain" placeholder="bad-domain.com" style="margin-bottom: 0;">
-                            <button class="btn" onclick="addBlacklist()">Block Domain</button>
-                        </div>
-                        <table id="bl-table">
-                            <thead><tr><th>Domain</th><th style="width:80px;">Action</th></tr></thead>
-                            <tbody></tbody>
-                        </table>
-                    </div>
-
-                    <div class="card">
-                        <h3>Model Retrain</h3>
-                        <p>Manually trigger a full retraining of the ML model using the latest data.</p>
-                        <button class="btn outline" onclick="retrainModel()" style="margin-top: 1rem;">Retrain Now</button>
-                    </div>
+                <div id="user-settings-msg" class="card" style="display:none; text-align:center; padding: 3rem;">
+                    <p class="text-muted">Network-wide settings are managed by the administrator.</p>
+                    <a href="/profile.html" class="btn outline mt-3">Manage API Keys</a>
                 </div>
             </div>
         </main>
     </div>
-    
+
     <script src="/assets/js/main.js"></script>
     <script>
         let saveTimeout;
 
-        async function initSettings() {
+        document.addEventListener("DOMContentLoaded", async () => {
             const me = await checkAuth();
-            if (me && me.is_admin) {
+            if (!me) return;
+            document.getElementById('sidebar').innerHTML = renderSidebar(me.is_admin);
+            document.getElementById('topbar').innerHTML = renderTopbar(me);
+            setActiveNavLink(); initMobileMenu(); initThemeToggle();
+
+            if (me.is_admin) {
                 document.getElementById('proxy-card').style.display = 'block';
+                document.getElementById('admin-extra').style.display = 'block';
                 pollProxyStatus();
                 setInterval(pollProxyStatus, 5000);
+                fetchBlacklist();
+            } else {
+                document.getElementById('user-settings-msg').style.display = 'block';
             }
-
-            const res = await fetch('/api/settings');
-            if (res.ok) {
-                const data = await res.json();
-                document.getElementById('threshold-slider').value = data.threshold || 85;
-                updateSliderUI();
-            }
-        }
-
-        const slider = document.getElementById('threshold-slider');
-        slider.addEventListener('input', () => {
-            updateSliderUI();
-            clearTimeout(saveTimeout);
-            saveTimeout = setTimeout(() => {
-                saveThreshold(slider.value);
-            }, 500);
+            loadSettings();
         });
 
-        function updateSliderUI() {
-            const val = parseInt(slider.value);
-            document.getElementById('threshold-val-text').textContent = `Current: ${val}% confidence required to block`;
-            
-            let desc = "";
-            document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
-            if (val <= 75) { desc = "Fewer false positives. May miss some threats."; document.querySelectorAll('.preset-btn')[0].classList.add('active'); }
-            else if (val <= 90) { desc = "Recommended. Best accuracy/safety balance."; document.querySelectorAll('.preset-btn')[1].classList.add('active'); }
-            else { desc = "Maximum protection. May block some safe sites."; document.querySelectorAll('.preset-btn')[2].classList.add('active'); }
-            
-            document.getElementById('threshold-desc').textContent = desc;
+        /* ── Settings ── */
+        async function loadSettings() {
+            const res = await fetch('/api/settings');
+            if (!res.ok) return;
+            const s = await res.json();
+            document.getElementById('threshold-slider').value = s.threshold || 85;
+            document.getElementById('toggle-autoblock').checked = !!s.auto_block;
+            document.getElementById('toggle-retrain').checked = !!s.auto_retrain;
+            document.getElementById('doh-provider').value = s.doh_provider || 'cloudflare';
+            updateThresholdText();
         }
 
-        function setThreshold(val, btnEl) {
-            slider.value = val;
-            updateSliderUI();
-            saveThreshold(val);
+        function updateThresholdText() {
+            const v = document.getElementById('threshold-slider').value;
+            document.getElementById('threshold-val-text').textContent = v + '%';
         }
 
-        async function saveThreshold(val) {
-            const res = await fetch('/api/settings', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({threshold: parseInt(val)})
-            });
-            if (res.ok) showToast("✓ Threshold saved", "success");
-            else showToast("Failed to save threshold", "error");
+        document.getElementById('threshold-slider').addEventListener('input', () => {
+            updateThresholdText();
+            debounceSave();
+        });
+        document.getElementById('toggle-autoblock').addEventListener('change', () => saveSettings());
+        document.getElementById('toggle-retrain').addEventListener('change', () => saveSettings());
+        document.getElementById('doh-provider').addEventListener('change', () => saveSettings());
+
+        function debounceSave() { clearTimeout(saveTimeout); saveTimeout = setTimeout(saveSettings, 500); }
+
+        async function saveSettings() {
+            const data = {
+                threshold: parseInt(document.getElementById('threshold-slider').value),
+                auto_block: document.getElementById('toggle-autoblock').checked,
+                auto_retrain: document.getElementById('toggle-retrain').checked,
+                doh_provider: document.getElementById('doh-provider').value
+            };
+            const res = await fetch('/api/settings', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
+            if (res.ok) showToast('Settings saved', 'success');
+            else showToast('Failed to save settings', 'error');
         }
 
+        /* ── Proxy ── */
         async function pollProxyStatus() {
-            const res = await fetch('/api/proxy/status').catch(()=>{});
-            if (res && res.ok) {
+            try {
+                const res = await fetch('/api/proxy/status');
+                if (!res.ok) return;
                 const s = await res.json();
                 const dot = document.getElementById('proxy-dot');
                 const text = document.getElementById('proxy-state-text');
                 const meta = document.getElementById('proxy-meta');
                 const bStart = document.getElementById('btn-start-proxy');
                 const bStop = document.getElementById('btn-stop-proxy');
-
                 if (s.running) {
-                    dot.style.background = 'var(--success)';
-                    dot.style.boxShadow = '0 0 8px var(--success)';
-                    text.textContent = 'Running';
-                    text.style.color = 'var(--success)';
-                    const startStr = s.started_at ? new Date(s.started_at).toLocaleTimeString() : '';
-                    meta.textContent = `PID: ${s.pid} | Since: ${startStr}`;
-                    bStart.disabled = true;
-                    bStop.disabled = false;
-                } else if (s.error) {
-                    dot.style.background = 'var(--warning)';
-                    text.textContent = 'Error';
-                    text.style.color = 'var(--warning)';
-                    meta.textContent = s.error;
-                    bStart.disabled = false;
-                    bStop.disabled = true;
+                    dot.style.background = 'var(--success)'; dot.style.boxShadow = '0 0 6px var(--success)';
+                    text.textContent = 'Running'; text.style.color = 'var(--success)';
+                    meta.textContent = `PID ${s.pid} · since ${s.started_at ? new Date(s.started_at).toLocaleTimeString() : '—'}`;
+                    bStart.disabled = true; bStop.disabled = false;
                 } else {
-                    dot.style.background = 'var(--danger)';
-                    dot.style.boxShadow = 'none';
-                    text.textContent = 'Stopped';
-                    text.style.color = 'var(--danger)';
-                    meta.textContent = 'Not currently intercepting traffic.';
-                    bStart.disabled = false;
-                    bStop.disabled = true;
+                    dot.style.background = s.error ? 'var(--warning)' : 'var(--danger)'; dot.style.boxShadow = 'none';
+                    text.textContent = s.error ? 'Error' : 'Stopped';
+                    text.style.color = s.error ? 'var(--warning)' : 'var(--danger)';
+                    meta.textContent = s.error || 'Service offline.';
+                    bStart.disabled = false; bStop.disabled = true;
                 }
-            }
+            } catch {}
         }
 
         async function controlProxy(action) {
             const btn = document.getElementById(`btn-${action}-proxy`);
-            const originalText = btn.innerHTML;
-            btn.innerHTML = `<span class="spinner"></span> ${action === 'start' ? 'Starting...' : 'Stopping...'}`;
-            btn.disabled = true;
-
-            const res = await fetch('/api/proxy/control', {
-                method: 'POST',
-                headers: {'Content-Type':'application/json'},
-                body: JSON.stringify({action})
-            });
-            
-            if (res.ok) {
-                showToast(`Proxy ${action}ed successfully`, "success");
-            } else {
-                const err = await res.json();
-                showToast(`Failed to ${action} proxy: ${err.error}`, "error");
-                btn.innerHTML = originalText;
-                btn.disabled = false;
-            }
+            const orig = btn.innerHTML; btn.innerHTML = `<span class="spinner"></span>`; btn.disabled = true;
+            try {
+                const res = await fetch('/api/proxy/control', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({action}) });
+                if (res.ok) showToast(`Proxy ${action}ed`, 'success');
+                else { const e = await res.json(); showToast(e.error, 'error'); btn.innerHTML = orig; btn.disabled = false; }
+            } catch { showToast('Network error', 'error'); btn.innerHTML = orig; btn.disabled = false; }
             pollProxyStatus();
         }
 
+        /* ── Blacklist ── */
         async function fetchBlacklist() {
-            const res = await fetch('/api/blacklist').catch(()=>{});
-            if(res && res.ok) {
+            try {
+                const res = await fetch('/api/blacklist');
+                if (!res.ok) return;
                 const list = await res.json();
                 const tb = document.querySelector('#bl-table tbody');
-                tb.innerHTML = '';
+                tb.innerHTML = list.length === 0 ? '<tr><td colspan="2" class="text-muted" style="text-align:center;">No rules.</td></tr>' : '';
                 list.forEach(item => {
-                    tb.innerHTML += `<tr><td>${item.domain}</td><td><button class="btn danger outline" style="padding:0.2rem 0.5rem" onclick="removeBlacklist('${item.domain}')">Remove</button></td></tr>`;
+                    tb.innerHTML += `<tr><td style="font-family:monospace;">${item.domain}</td><td><button class="btn outline danger" style="padding:0.2rem 0.5rem;font-size:0.75rem;" onclick="removeBlacklist('${item.domain}')">Del</button></td></tr>`;
                 });
-            }
+            } catch {}
         }
-        
         async function addBlacklist() {
-            const d = document.getElementById('bl-domain').value;
-            if(!d) return;
+            const d = document.getElementById('bl-domain').value; if (!d) return;
             await fetch('/api/blacklist/add', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({domain:d})});
-            document.getElementById('bl-domain').value = '';
-            showToast("Domain added to blacklist", "success");
-            fetchBlacklist();
+            document.getElementById('bl-domain').value = ''; showToast('Rule added', 'success'); fetchBlacklist();
         }
-        
         async function removeBlacklist(d) {
             await fetch('/api/blacklist/remove', {method:'DELETE', headers:{'Content-Type':'application/json'}, body:JSON.stringify({domain:d})});
-            showToast("Domain removed", "success");
-            fetchBlacklist();
+            showToast('Rule removed', 'success'); fetchBlacklist();
         }
-        
         async function retrainModel() {
-            showToast("Model retraining started...", "info");
-            await fetch('/api/model/retrain', {method: 'POST'});
+            const btn = document.getElementById('retrain-btn');
+            btn.innerHTML = '<span class="spinner"></span> Training…'; btn.disabled = true;
+            try {
+                const res = await fetch('/api/model/retrain', {method:'POST'});
+                if (res.ok) showToast('Model retrained', 'success'); else showToast('Retrain failed', 'error');
+            } catch { showToast('Network error', 'error'); }
+            btn.innerHTML = 'Retrain model now'; btn.disabled = false;
         }
-
-        document.addEventListener("DOMContentLoaded", () => {
-            initSettings();
-            fetchBlacklist();
-        });
     </script>
 </body>
 </html>

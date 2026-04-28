@@ -2,122 +2,92 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Threat Logs - SecureDNS Guard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Query Log - SecureDNS Guard</title>
+        <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
     <link rel="stylesheet" href="/assets/css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        .filter-bar { background: var(--bg-secondary); padding: 1rem; border-radius: 8px; margin-bottom: 1rem; position: sticky; top: 0; z-index: 10; border: 1px solid var(--border-color); }
-        .filter-row { display: flex; gap: 1rem; margin-bottom: 1rem; align-items: center; flex-wrap: wrap;}
-        .filter-row:last-child { margin-bottom: 0; }
-        .filter-row input, .filter-row select { margin-bottom: 0; width: auto; flex: 1; min-width: 150px; }
-        
-        .log-row.malicious { border-left: 3px solid var(--danger); }
-        .log-row.safe { border-left: 3px solid var(--success); }
-        .log-row { cursor: pointer; transition: background 0.2s; }
-        .log-row:hover { background: rgba(255,255,255,0.05); }
-        
-        .row-details { display: none; background: rgba(0,0,0,0.2); padding: 1rem 2rem; border-bottom: 1px solid var(--border-color); font-family: monospace;}
+        .filter-section { margin-bottom: 1.5rem; }
+        .row-details { display: none; background: rgba(0,0,0,0.02); }
+        [data-theme="dark"] .row-details { background: rgba(255,255,255,0.02); }
         .row-details.open { display: table-row; }
         
-        .conf-bar-bg { width: 100px; height: 6px; background: #333; border-radius: 3px; display: inline-block; margin-right: 8px; overflow: hidden; vertical-align: middle; }
-        .conf-bar { height: 100%; border-radius: 3px; }
-        
-        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center; }
-        .modal.open { display: flex; }
-        .modal-content { background: var(--bg-secondary); border: 1px solid var(--border-color); padding: 2rem; border-radius: 12px; width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto; }
-        
-        .pagination { display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; padding: 1rem; background: var(--bg-secondary); border-radius: 8px; }
-        .page-btns { display: flex; gap: 0.5rem; }
-        .page-btns button { background: var(--bg-primary); border: 1px solid var(--border-color); color: var(--text-primary); padding: 0.3rem 0.8rem; border-radius: 4px; cursor: pointer; }
-        .page-btns button:hover { border-color: var(--accent); }
-        .page-btns button.active { background: var(--accent); border-color: var(--accent); }
+        .pagination { display: flex; justify-content: space-between; align-items: center; padding: 1rem; border-top: 1px solid var(--border-color); }
+        .page-btns { display: flex; gap: 0.25rem; }
+        .page-btns button { 
+            background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-primary); 
+            width: 32px; height: 32px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+        }
+        .page-btns button:hover:not(:disabled) { border-color: var(--info); color: var(--info); }
+        .page-btns button.active { background: var(--info); border-color: var(--info); color: white; }
         .page-btns button:disabled { opacity: 0.5; cursor: not-allowed; }
     </style>
 </head>
 <body>
-    <div class="app-container">
-        <aside class="sidebar">
-            <div class="brand">🛡️ SecureDNS</div>
-            <a href="/dashboard.html" class="nav-item">Dashboard</a>
-            <a href="/threat_logs.html" class="nav-item">Threat Logs</a>
-            <a href="/profile.html" class="nav-item">API Keys</a>
-            <a href="/settings.html" class="nav-item">Settings</a>
-            <a href="/logout" class="nav-item" style="margin-top: auto; color: var(--danger);">Logout</a>
-        </aside>
-        
+    <div class="app-layout">
+        <aside class="sidebar" id="sidebar"></aside>
         <div class="sidebar-overlay"></div>
+        
+        <main class="main-wrapper">
+            <header class="topbar" id="topbar"></header>
+            
+            <div class="content">
+                <div class="page-header">
+                    <h1 class="page-title">Query Log</h1>
+                    <button class="btn outline" onclick="exportCSV()">Export CSV</button>
+                </div>
 
-        <main class="main-content">
-            <header class="top-header">
-                <button class="hamburger-btn">☰</button>
-                <h2>Threat Logs</h2>
-            </header>
-
-            <div class="content-area">
-                <div class="filter-bar">
-                    <div class="filter-row">
-                        <input type="text" id="search" placeholder="🔍 Search domain...">
+                <div class="filter-section">
+                    <div class="filter-card">
+                        <input type="text" id="search" placeholder="Search by domain..." style="flex: 2; min-width: 200px;">
                         <select id="verdict">
-                            <option value="all">All Verdicts</option>
-                            <option value="Safe">Safe</option>
-                            <option value="Malicious">Malicious</option>
+                            <option value="all">All statuses</option>
+                            <option value="Safe">Processed</option>
+                            <option value="Malicious">Blocked</option>
                         </select>
                         <select id="attack_type">
-                            <option value="all">All Attack Types</option>
+                            <option value="all">All rule types</option>
                             <option value="dga">DGA</option>
                             <option value="tunneling">DNS Tunneling</option>
                         </select>
-                    </div>
-                    <div class="filter-row">
-                        <div style="flex:1; display:flex; align-items:center; gap: 1rem;">
-                            <label style="white-space:nowrap; font-size:0.875rem;">Min Confidence:</label>
-                            <input type="range" id="min_conf" min="0" max="100" value="0" style="flex:1;">
-                            <span id="conf_val" style="width: 40px;">0%</span>
+                        <div class="d-flex align-items-center gap-2" style="flex: 1; min-width: 150px;">
+                            <label class="text-muted" style="white-space:nowrap; font-size:0.875rem;">Min Conf:</label>
+                            <input type="range" id="min_conf" min="0" max="100" value="0" style="margin:0; flex:1;">
+                            <span id="conf_val" style="width: 35px; font-size: 0.875rem;">0%</span>
                         </div>
-                        <input type="date" id="date_from">
-                        <input type="date" id="date_to">
-                        <button class="btn outline" onclick="clearFilters()">Clear Filters</button>
-                        <button class="btn" onclick="exportCSV()">📥 Export CSV</button>
+                        <input type="date" id="date_from" title="From date" style="min-width:130px;">
+                        <input type="date" id="date_to" title="To date" style="min-width:130px;">
+                        <button class="btn outline" onclick="clearFilters()" title="Reset filters" style="margin-bottom:0;">Reset</button>
                     </div>
                 </div>
 
-                <div id="stats-summary" style="margin-bottom: 1rem; color: var(--text-secondary); font-size: 0.875rem;">
-                    Loading stats...
-                </div>
-
-                <div class="card table-container" style="padding: 0;">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>Time</th>
-                                <th class="hide-mobile">Source IP</th>
-                                <th>Domain</th>
-                                <th>Prediction</th>
-                                <th class="hide-mobile">Attack Type</th>
-                                <th>Confidence</th>
-                                <th>Details</th>
-                            </tr>
-                        </thead>
-                        <tbody id="logs-body">
-                            <!-- Logs injected here -->
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="pagination">
-                    <div style="font-size: 0.875rem; color: var(--text-secondary);" id="page-info">
-                        Page 1 of 1 (0 total entries)
+                <div class="card" style="padding: 0; overflow: hidden;">
+                    <div class="table-responsive" style="margin: 0;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="background: var(--bg-card);">Time</th>
+                                    <th style="background: var(--bg-card);">Client</th>
+                                    <th style="background: var(--bg-card);">Request</th>
+                                    <th style="background: var(--bg-card);">Status</th>
+                                    <th style="background: var(--bg-card);" class="hide-mobile">Rule / Type</th>
+                                    <th style="background: var(--bg-card);">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="logs-body">
+                                <tr><td colspan="6" style="text-align:center; padding: 3rem;">Loading queries...</td></tr>
+                            </tbody>
+                        </table>
                     </div>
-                    <div class="page-btns" id="page-btns">
-                        <!-- Buttons injected here -->
-                    </div>
-                    <div>
-                        <select id="limit" style="margin:0; padding:0.3rem;" onchange="currentPage=1; loadLogs();">
-                            <option value="25">25 / page</option>
-                            <option value="50" selected>50 / page</option>
-                            <option value="100">100 / page</option>
-                            <option value="200">200 / page</option>
+
+                    <div class="pagination">
+                        <div class="text-muted" style="font-size: 0.875rem;" id="page-info">Page 1</div>
+                        <div class="page-btns" id="page-btns"></div>
+                        <select id="limit" style="margin:0; width:auto; padding: 0.3rem;" onchange="currentPage=1; loadLogs();">
+                            <option value="25">25</option>
+                            <option value="50" selected>50</option>
+                            <option value="100">100</option>
                         </select>
                     </div>
                 </div>
@@ -125,23 +95,26 @@
         </main>
     </div>
 
-    <!-- Why Modal -->
-    <div class="modal" id="why-modal">
+    <!-- Explanation Modal -->
+    <div class="modal-overlay" id="why-modal">
         <div class="modal-content">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
-                <h3 id="modal-title">AI Analysis</h3>
-                <button class="btn outline" style="padding: 0.2rem 0.6rem;" onclick="closeModal()">✕</button>
+            <div class="modal-header">
+                <h3 class="modal-title">Query Details</h3>
+                <button class="modal-close" onclick="closeModal()">✕</button>
             </div>
-            <div id="modal-badge" style="margin-bottom: 1.5rem;"></div>
             
-            <div style="height: 250px; margin-bottom: 2rem;">
+            <div class="mb-3" style="font-family: monospace; font-size: 1.1rem; word-break: break-all; background: var(--bg-base); padding: 1rem; border-radius: 4px;" id="modal-domain"></div>
+            <div id="modal-badge" class="mb-3"></div>
+            
+            <div style="height: 250px; margin-bottom: 1.5rem;">
                 <canvas id="whyChart"></canvas>
             </div>
             
-            <table style="font-size: 0.875rem;">
-                <thead><tr><th>Feature</th><th>Value</th></tr></thead>
-                <tbody id="modal-features"></tbody>
-            </table>
+            <div class="table-responsive" style="margin:0; border: none;">
+                <table>
+                    <tbody id="modal-features"></tbody>
+                </table>
+            </div>
         </div>
     </div>
 
@@ -152,11 +125,25 @@
         let chartInstance = null;
         let searchTimeout = null;
 
-        document.getElementById('min_conf').addEventListener('input', (e) => {
-            document.getElementById('conf_val').textContent = e.target.value + '%';
+        document.addEventListener("DOMContentLoaded", async () => {
+            const me = await checkAuth();
+            if (me) {
+                document.getElementById('sidebar').innerHTML = renderSidebar(me.is_admin);
+                document.getElementById('topbar').innerHTML = renderTopbar(me);
+                setActiveNavLink();
+                initMobileMenu();
+                initThemeToggle();
+            }
+            loadLogs();
         });
 
-        const filterInputs = ['search', 'verdict', 'attack_type', 'min_conf', 'date_from', 'date_to'];
+        document.getElementById('min_conf').addEventListener('input', (e) => {
+            document.getElementById('conf_val').textContent = e.target.value + '%';
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => { currentPage = 1; loadLogs(); }, 300);
+        });
+
+        const filterInputs = ['search', 'verdict', 'attack_type', 'date_from', 'date_to'];
         filterInputs.forEach(id => {
             document.getElementById(id).addEventListener('input', () => {
                 if (id === 'search') {
@@ -189,14 +176,16 @@
                 min_confidence: document.getElementById('min_conf').value,
                 search: document.getElementById('search').value
             });
-            if (document.getElementById('date_from').value) params.append('date_from', document.getElementById('date_from').value);
-            if (document.getElementById('date_to').value) params.append('date_to', document.getElementById('date_to').value);
+            const df = document.getElementById('date_from').value;
+            const dt = document.getElementById('date_to').value;
+            if (df) params.append('date_from', df);
+            if (dt) params.append('date_to', dt);
             return params;
         }
 
         async function loadLogs() {
             const tb = document.getElementById('logs-body');
-            tb.innerHTML = '<tr><td colspan="8" style="text-align:center;">Loading...</td></tr>';
+            tb.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 3rem;">Loading queries...</td></tr>';
             
             const params = getFilterParams();
             const res = await fetch(`/api/logs?${params.toString()}`);
@@ -204,57 +193,51 @@
             
             const data = await res.json();
             tb.innerHTML = '';
-            
-            let safeCount = 0;
-            let blockedCount = 0;
+
+            if (data.logs.length === 0) {
+                tb.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 3rem;" class="text-muted">No queries match your filters.</td></tr>';
+            }
 
             data.logs.forEach(l => {
-                if (l.action_taken === 'Blocked') blockedCount++; else safeCount++;
-                
                 const isMalicious = l.action_taken === 'Blocked';
-                const cls = isMalicious ? 'malicious' : 'safe';
-                const badge = isMalicious ? `<span class="badge red">🚫 Malicious</span>` : `<span class="badge green">✅ Safe</span>`;
+                let badge = isMalicious ? `<span class="badge red">Blocked by ML filters</span>` : `<span class="badge green">Processed</span>`;
                 
-                const conf = (l.confidence * 100).toFixed(1);
-                let color = '#22c55e';
-                if (conf < 50) color = '#ef4444';
-                else if (conf < 80) color = '#f59e0b';
-                
-                const confBar = `<div class="conf-bar-bg"><div class="conf-bar" style="width:${conf}%; background:${color}"></div></div> ${conf}%`;
+                const conf = (l.confidence * 100).toFixed(0);
+                const confColor = isMalicious ? 'var(--danger)' : 'var(--success)';
 
-                // Main row
                 const tr = document.createElement('tr');
-                tr.className = `log-row ${cls}`;
+                tr.style.cursor = 'pointer';
+                
+                const domainDisp = l.domain_name.length > 50 ? l.domain_name.substring(0, 47) + '...' : l.domain_name;
+
                 tr.innerHTML = `
-                    <td>${l.log_id}</td>
-                    <td>${new Date(l.timestamp).toLocaleString()}</td>
-                    <td class="hide-mobile">${l.source_ip}</td>
-                    <td style="word-break: break-all;">${l.domain_name}</td>
-                    <td>${badge}</td>
-                    <td class="hide-mobile">${l.attack_type || '-'}</td>
-                    <td>${confBar}</td>
+                    <td class="text-muted" style="white-space:nowrap;">${new Date(l.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'})}</td>
+                    <td>${l.source_ip}</td>
+                    <td style="font-family: monospace; color: ${isMalicious ? 'var(--danger)' : 'var(--text-primary)'};" title="${l.domain_name}">${domainDisp}</td>
+                    <td>${badge} <span style="font-size: 0.75rem; color: ${confColor}; margin-left: 0.5rem;">${conf}%</span></td>
+                    <td class="hide-mobile">${l.attack_type && l.attack_type !== 'None' ? l.attack_type : 'Behavioral'}</td>
                     <td>
-                        <button class="btn outline" style="padding: 0.2rem 0.5rem;" onclick="toggleRow(event, ${l.log_id})">▼</button>
-                        <button class="btn" style="padding: 0.2rem 0.5rem; margin-left: 5px;" onclick="openWhy(event, ${l.log_id}, '${l.domain_name}', ${conf}, ${isMalicious})">?</button>
+                        <button class="btn outline" style="padding: 0.2rem 0.5rem; font-size: 0.75rem;" onclick="openWhy(event, ${l.log_id}, '${l.domain_name}', ${conf}, ${isMalicious})">Explain</button>
                     </td>
                 `;
                 
                 tr.addEventListener('click', (e) => {
-                    if (e.target.tagName !== 'BUTTON') toggleRow(e, l.log_id);
+                    if (e.target.tagName !== 'BUTTON') {
+                        const details = document.getElementById(`details-${l.log_id}`);
+                        if(details) details.classList.toggle('open');
+                    }
                 });
 
-                // Expanded row
                 const expandTr = document.createElement('tr');
                 expandTr.id = `details-${l.log_id}`;
                 expandTr.className = 'row-details';
                 expandTr.innerHTML = `
-                    <td colspan="8">
-                        <div style="display:flex; flex-wrap:wrap; gap: 2rem;">
-                            <div><strong>Entropy:</strong> ${parseFloat(l.entropy || 0).toFixed(2)}</div>
-                            <div><strong>Domain Length:</strong> ${l.domain_length || 0}</div>
-                            <div><strong>Subdomains:</strong> ${l.subdomain_count || 0}</div>
-                            <div><strong>DoH Provider:</strong> ${l.doh_provider || 'N/A'}</div>
-                            <div><strong>Latency:</strong> ${l.latency_ms || 0}ms</div>
+                    <td colspan="6" style="padding: 1rem 2rem;">
+                        <div class="grid-4">
+                            <div><div class="text-muted" style="font-size:0.75rem; text-transform:uppercase;">Response</div><div>${isMalicious ? 'NXDOMAIN (0.0.0.0)' : 'Resolved'}</div></div>
+                            <div><div class="text-muted" style="font-size:0.75rem; text-transform:uppercase;">Time</div><div>${new Date(l.timestamp).toLocaleString()}</div></div>
+                            <div><div class="text-muted" style="font-size:0.75rem; text-transform:uppercase;">DoH Provider</div><div>${l.doh_provider || 'N/A'}</div></div>
+                            <div><div class="text-muted" style="font-size:0.75rem; text-transform:uppercase;">Latency</div><div>${l.latency_ms || 0} ms</div></div>
                         </div>
                     </td>
                 `;
@@ -262,16 +245,9 @@
                 tb.appendChild(tr);
                 tb.appendChild(expandTr);
             });
-
-            if (data.logs.length === 0) {
-                tb.innerHTML = '<tr><td colspan="8" style="text-align:center;">No entries found.</td></tr>';
-            }
-
-            document.getElementById('stats-summary').textContent = `Showing ${data.logs.length} entries | ${blockedCount} blocked | ${safeCount} safe`;
             
             totalPages = data.pagination.pages;
-            document.getElementById('page-info').textContent = `Page ${data.pagination.page} of ${totalPages} (${data.pagination.total} total entries)`;
-            
+            document.getElementById('page-info').textContent = `Total: ${data.pagination.total}`;
             renderPagination(data.pagination);
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
@@ -281,7 +257,7 @@
             container.innerHTML = '';
             
             const prev = document.createElement('button');
-            prev.textContent = '← Prev';
+            prev.innerHTML = '←';
             prev.disabled = !p.has_prev;
             prev.onclick = () => { currentPage--; loadLogs(); };
             container.appendChild(prev);
@@ -298,25 +274,19 @@
             }
 
             const next = document.createElement('button');
-            next.textContent = 'Next →';
+            next.innerHTML = '→';
             next.disabled = !p.has_next;
             next.onclick = () => { currentPage++; loadLogs(); };
             container.appendChild(next);
         }
 
-        function toggleRow(e, id) {
-            if (e) e.stopPropagation();
-            const el = document.getElementById(`details-${id}`);
-            if (el) el.classList.toggle('open');
-        }
-
         async function openWhy(e, id, domain, conf, isMalicious) {
             if (e) e.stopPropagation();
             const modal = document.getElementById('why-modal');
-            document.getElementById('modal-title').textContent = `AI Analysis: ${domain}`;
+            document.getElementById('modal-domain').textContent = domain;
             document.getElementById('modal-badge').innerHTML = isMalicious ? 
-                `<span class="badge red">🚫 Malicious (${conf}%)</span>` : 
-                `<span class="badge green">✅ Safe (${conf}%)</span>`;
+                `<span class="badge red">Blocked (${conf}% confidence)</span>` : 
+                `<span class="badge green">Processed (${conf}% confidence)</span>`;
             
             modal.classList.add('open');
             
@@ -330,14 +300,17 @@
             const values = [];
             const colors = [];
             
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            const gridColor = isDark ? '#373a40' : '#e4e7eb';
+            const textColor = isDark ? '#909296' : '#737f8d';
+            
             for (const [feat, val] of Object.entries(data.features)) {
-                tb.innerHTML += `<tr><td>${feat}</td><td>${val}</td></tr>`;
+                tb.innerHTML += `<tr><td style="font-weight: 500; border-color: ${gridColor};">${feat}</td><td style="font-family: monospace; border-color: ${gridColor};">${val}</td></tr>`;
                 labels.push(feat);
                 values.push(val);
-                // Rough visualization: some features indicate malicious if high
-                if (feat === 'Entropy' && val > 3.5) colors.push('rgba(239, 68, 68, 0.8)');
-                else if (feat === 'Domain Length' && val > 25) colors.push('rgba(239, 68, 68, 0.8)');
-                else colors.push('rgba(99, 102, 241, 0.8)');
+                if (feat === 'Entropy' && val > 3.5) colors.push('#e25858');
+                else if (feat === 'Domain Length' && val > 25) colors.push('#e25858');
+                else colors.push('#4a90e2');
             }
             
             const ctx = document.getElementById('whyChart').getContext('2d');
@@ -348,19 +321,20 @@
                 data: {
                     labels: labels,
                     datasets: [{
-                        label: 'Feature Value',
+                        label: 'Value',
                         data: values,
-                        backgroundColor: colors
+                        backgroundColor: colors,
+                        borderRadius: 2
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     indexAxis: 'y',
-                    plugins: { legend: { display: false }, title: {display:true, text:'Feature Impact on Decision', color:'#fff'} },
+                    plugins: { legend: { display: false } },
                     scales: {
-                        x: { grid: { color: '#333' }, ticks: {color: '#999'} },
-                        y: { grid: { display: false }, ticks: {color: '#999'} }
+                        x: { grid: { color: gridColor }, ticks: {color: textColor} },
+                        y: { grid: { display: false }, ticks: {color: textColor} }
                     }
                 }
             });
@@ -374,12 +348,10 @@
             showToast("Preparing download...", "info");
             const params = getFilterParams();
             params.delete('page');
-            params.delete('limit'); // export all matching
+            params.delete('limit');
             window.location.href = `/api/logs/export?${params.toString()}`;
-            setTimeout(() => showToast("✓ Downloaded entries", "success"), 1500);
+            setTimeout(() => showToast("Download started", "success"), 1500);
         }
-
-        document.addEventListener("DOMContentLoaded", loadLogs);
     </script>
 </body>
 </html>

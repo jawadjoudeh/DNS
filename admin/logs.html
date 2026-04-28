@@ -2,14 +2,127 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Logs - Admin</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Logs – SecureDNS Guard</title>
+        <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
     <link rel="stylesheet" href="/assets/css/style.css">
+    <style>
+        .admin-sidebar { width: 250px; background: var(--bg-sidebar); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 1.5rem 0; }
+        .admin-sidebar .sidebar-header { padding: 0 1.5rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.75rem; }
+        .admin-sidebar .nav-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1.5rem; color: var(--text-primary); font-weight: 500; border-left: 3px solid transparent; }
+        .admin-sidebar .nav-item:hover { background: rgba(0,0,0,0.03); }
+        .admin-sidebar .nav-item.active { background: rgba(93,185,118,0.08); color: var(--accent); border-left-color: var(--accent); }
+        .page-btns { display: flex; gap: 0.25rem; }
+        .page-btns button { background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-primary); width: 32px; height: 32px; border-radius: 4px; cursor: pointer; }
+        .page-btns button:hover:not(:disabled) { border-color: var(--info); color: var(--info); }
+        .page-btns button.active { background: var(--info); border-color: var(--info); color: white; }
+        .page-btns button:disabled { opacity: 0.5; cursor: not-allowed; }
+    </style>
 </head>
 <body>
-    <nav class="navbar">
-        <div class="brand">Admin Panel</div>
-        <div class="nav-links"><a href="/admin/dashboard">Dashboard</a><a href="/admin/users">Users</a><a href="/admin/logs" style="color:white;">Logs</a><a href="/admin/model">ML Model</a><a href="/admin/logout">Logout</a></div>
-    </nav>
-    <div class="container"><div class="card"><h3>System Logs</h3><p>View global threat logs in dashboard.</p></div></div>
+    <div class="app-layout">
+        <aside class="admin-sidebar">
+            <div class="sidebar-header">
+                <svg viewBox="0 0 24 24" fill="var(--accent)" width="28" height="28"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
+                <span style="font-size:1.25rem; font-weight:700;">Admin</span>
+            </div>
+            <a href="/admin/dashboard" class="nav-item"><i>📊</i> Dashboard</a>
+            <a href="/admin/logs" class="nav-item active"><i>📋</i> All Logs</a>
+            <a href="/admin/users" class="nav-item"><i>👥</i> Users</a>
+            <a href="/admin/model" class="nav-item"><i>🧠</i> ML Model</a>
+            <div style="flex:1;"></div>
+            <a href="/admin/logout" class="nav-item" style="color:var(--danger);"><i>🚪</i> Logout</a>
+        </aside>
+
+        <main class="main-wrapper">
+            <header class="topbar">
+                <span style="font-weight:500;">All Query Logs</span>
+                <button class="theme-toggle" id="theme-toggle">🌙</button>
+            </header>
+
+            <div class="content">
+                <div class="page-header">
+                    <h1 class="page-title">Query Log (All Users)</h1>
+                    <button class="btn outline" onclick="exportCSV()">Export CSV</button>
+                </div>
+
+                <div class="filter-card mb-4">
+                    <input type="text" id="search" placeholder="Search domain..." style="flex:2; min-width:200px;">
+                    <select id="verdict"><option value="all">All</option><option value="Safe">Safe</option><option value="Malicious">Blocked</option></select>
+                    <select id="attack_type"><option value="all">All Types</option><option value="dga">DGA</option><option value="tunneling">Tunneling</option></select>
+                    <button class="btn outline" onclick="clearFilters()" style="margin-bottom:0;">Reset</button>
+                </div>
+
+                <div class="card" style="padding:0; overflow:hidden;">
+                    <div class="table-responsive" style="margin:0;">
+                        <table>
+                            <thead><tr><th>Time</th><th>User</th><th>Client</th><th>Domain</th><th>Status</th><th>Type</th></tr></thead>
+                            <tbody id="logs-body"><tr><td colspan="6" style="text-align:center; padding:3rem;">Loading…</td></tr></tbody>
+                        </table>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding:1rem; border-top:1px solid var(--border-color);">
+                        <span class="text-muted" id="page-info" style="font-size:0.85rem;"></span>
+                        <div class="page-btns" id="page-btns"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Theme
+        (function(){
+            const btn=document.getElementById('theme-toggle'); const saved=localStorage.getItem('theme');
+            if(saved==='dark'||(!saved&&window.matchMedia('(prefers-color-scheme:dark)').matches)){document.documentElement.setAttribute('data-theme','dark');btn.textContent='☀️';}
+            btn.addEventListener('click',()=>{const d=document.documentElement.getAttribute('data-theme')==='dark';document.documentElement.setAttribute('data-theme',d?'light':'dark');localStorage.setItem('theme',d?'light':'dark');btn.textContent=d?'🌙':'☀️';});
+        })();
+
+        let currentPage = 1;
+        // Use admin/api/all-logs for full data
+        async function loadLogs() {
+            const tb = document.getElementById('logs-body');
+            tb.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:3rem;">Loading…</td></tr>';
+            try {
+                const res = await fetch('/admin/api/all-logs');
+                if (!res.ok) return;
+                const logs = await res.json();
+                tb.innerHTML = '';
+                if (logs.length === 0) { tb.innerHTML = '<tr><td colspan="6" class="text-muted" style="text-align:center; padding:3rem;">No logs.</td></tr>'; return; }
+
+                const search = document.getElementById('search').value.toLowerCase();
+                const verdict = document.getElementById('verdict').value;
+                const atype = document.getElementById('attack_type').value;
+
+                let filtered = logs.filter(l => {
+                    if (search && !l.domain_name.toLowerCase().includes(search)) return false;
+                    if (verdict === 'Safe' && l.action_taken === 'Blocked') return false;
+                    if (verdict === 'Malicious' && l.action_taken !== 'Blocked') return false;
+                    if (atype !== 'all' && l.attack_type !== atype) return false;
+                    return true;
+                });
+
+                filtered.forEach(l => {
+                    const blocked = l.action_taken === 'Blocked';
+                    tb.innerHTML += `<tr>
+                        <td class="text-muted" style="white-space:nowrap;">${new Date(l.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</td>
+                        <td>${l.username || l.user_id || '—'}</td>
+                        <td>${l.source_ip}</td>
+                        <td style="font-family:monospace; color:${blocked?'var(--danger)':'var(--text-primary)'};">${l.domain_name.length>40?l.domain_name.substring(0,37)+'...':l.domain_name}</td>
+                        <td><span class="badge ${blocked?'red':'green'}">${blocked?'Blocked':'Safe'}</span></td>
+                        <td>${l.attack_type||'—'}</td>
+                    </tr>`;
+                });
+                document.getElementById('page-info').textContent = `${filtered.length} entries`;
+            } catch(e) { tb.innerHTML = '<tr><td colspan="6" class="text-danger" style="text-align:center; padding:3rem;">Failed to load logs.</td></tr>'; }
+        }
+
+        document.getElementById('search').addEventListener('input', loadLogs);
+        document.getElementById('verdict').addEventListener('change', loadLogs);
+        document.getElementById('attack_type').addEventListener('change', loadLogs);
+        function clearFilters() { document.getElementById('search').value=''; document.getElementById('verdict').value='all'; document.getElementById('attack_type').value='all'; loadLogs(); }
+        function exportCSV() { window.location.href = '/api/logs/export'; }
+
+        loadLogs();
+    </script>
 </body>
 </html>

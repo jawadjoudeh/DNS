@@ -2,73 +2,116 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Profile - SecureDNS Guard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile – SecureDNS Guard</title>
+    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
     <link rel="stylesheet" href="/assets/css/style.css">
+    <style>
+        .profile-avatar {
+            width: 64px; height: 64px; border-radius: 16px;
+            background: linear-gradient(135deg, var(--accent), var(--info));
+            color: white; display: flex; align-items: center; justify-content: center;
+            font-weight: 800; font-size: 1.75rem;
+        }
+        .profile-header { display: flex; align-items: center; gap: 1.25rem; margin-bottom: 1.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--border-color); }
+        .key-card {
+            background: var(--bg-base); padding: 1rem; border-radius: var(--border-radius-sm);
+            margin-bottom: 0.75rem; border: 1px solid var(--border-color);
+            transition: border-color 0.2s;
+        }
+        .key-card:hover { border-color: var(--accent); }
+        .key-input {
+            font-family: 'Courier New', monospace; font-size: 0.8rem;
+            background: var(--bg-card); margin: 0; padding: 0.4rem 0.6rem;
+            border: 1px solid var(--border-color); letter-spacing: 0.02em;
+        }
+        .info-row { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 0; border-bottom: 1px solid var(--border-color); }
+        .info-row:last-child { border-bottom: none; }
+        .info-label { color: var(--text-secondary); font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+        .info-value { font-weight: 600; }
+    </style>
 </head>
 <body>
-    <nav class="navbar">
-        <div class="brand">SecureDNS Guard</div>
-        <div class="nav-links">
-            <a href="/dashboard.html">Dashboard</a>
-            <a href="/logout">Logout</a>
-        </div>
-    </nav>
-    <div class="container">
-        <div class="grid-2">
-            <div class="card">
-                <h3>My Profile</h3>
-                <div id="profile-info" style="margin-top: 1rem;"></div>
+    <div class="app-layout">
+        <aside class="sidebar" id="sidebar"></aside>
+        <div class="sidebar-overlay"></div>
+        <main class="main-wrapper">
+            <header class="topbar" id="topbar"></header>
+            <div class="content">
+                <div class="page-header"><h1 class="page-title">Profile & API Keys</h1></div>
+                <div class="grid-2 mb-4">
+                    <div class="card">
+                        <div class="card-header"><h2 class="card-title">Account</h2></div>
+                        <div id="profile-info"><div class="skeleton" style="height:120px;"></div></div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h2 class="card-title">API Keys</h2>
+                            <button class="btn" onclick="generateKey()" style="padding:0.35rem 0.85rem; font-size:0.85rem;">+ New Key</button>
+                        </div>
+                        <p class="text-muted mb-3" style="font-size:0.85rem;">Use these keys to authenticate API requests. Keep them secret.</p>
+                        <div id="keys-list"><div class="skeleton" style="height:60px;"></div></div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header"><h2 class="card-title">Client Proxy</h2></div>
+                    <p class="text-muted mb-3" style="font-size:0.875rem;">Download a pre-configured DNS proxy script with your API key embedded. Run it on any machine to protect DNS traffic through SecureDNS Guard.</p>
+                    <a href="/api/proxy/download" class="btn outline">⬇ Download dns_proxy.py</a>
+                </div>
             </div>
-            <div class="card">
-                <h3>API Keys</h3>
-                <button class="btn" onclick="generateKey()" style="margin-bottom: 1rem;">Generate New Key</button>
-                <div id="keys-list"></div>
-            </div>
-        </div>
+        </main>
     </div>
-    
     <script src="/assets/js/main.js"></script>
     <script>
         document.addEventListener("DOMContentLoaded", async () => {
-            const me = await fetch('/api/auth/me').then(r => r.json());
+            const me = await checkAuth();
+            if (!me) return;
+            document.getElementById('sidebar').innerHTML = renderSidebar(me.is_admin);
+            document.getElementById('topbar').innerHTML = renderTopbar(me);
+            setActiveNavLink(); initMobileMenu(); initThemeToggle();
+
             document.getElementById('profile-info').innerHTML = `
-                <p><strong>Username:</strong> ${me.username}</p>
-                <p><strong>Email:</strong> ${me.email}</p>
-                <p><strong>Plan:</strong> <span class="badge blue">${me.plan}</span></p>
-                <p><strong>Provider:</strong> ${me.oauth_provider || 'Email'}</p>
+                <div class="profile-header">
+                    <div class="profile-avatar">${me.username.charAt(0).toUpperCase()}</div>
+                    <div>
+                        <div style="font-size:1.15rem; font-weight:700;">${me.username}</div>
+                        <div class="text-muted" style="font-size:0.875rem;">${me.email}</div>
+                    </div>
+                </div>
+                <div class="info-row"><span class="info-label">Plan</span><span class="info-value"><span class="badge blue">${(me.plan||'free').toUpperCase()}</span></span></div>
+                <div class="info-row"><span class="info-label">Role</span><span class="info-value">${me.is_admin ? '<span class="badge red">Admin</span>' : '<span class="badge gray">User</span>'}</span></div>
+                <div class="info-row"><span class="info-label">User ID</span><span class="info-value text-muted">#${me.user_id}</span></div>
             `;
             fetchKeys();
         });
-        
+
         async function fetchKeys() {
             const res = await fetch('/api/v1/keys');
-            if (res.ok) {
-                const keys = await res.json();
-                const list = document.getElementById('keys-list');
-                list.innerHTML = '';
-                keys.forEach(k => {
-                    const div = document.createElement('div');
-                    div.style.background = '#0f172a';
-                    div.style.padding = '1rem';
-                    div.style.marginBottom = '1rem';
-                    div.style.borderRadius = '4px';
-                    
-                    div.innerHTML = `
-                        <div style="display:flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                            <strong>${k.name}</strong>
-                            <span>Uses Today: ${k.uses_today}</span>
-                        </div>
-                        <code style="color: var(--accent-primary); word-break: break-all;">${k.key_value}</code>
-                        <button class="btn outline" style="padding: 0.2rem 0.5rem; margin-top: 0.5rem;" onclick="navigator.clipboard.writeText('${k.key_value}')">Copy</button>
-                    `;
-                    list.appendChild(div);
-                });
-            }
+            if (!res.ok) return;
+            const keys = await res.json();
+            const list = document.getElementById('keys-list');
+            list.innerHTML = '';
+            if (keys.length === 0) { list.innerHTML = '<p class="text-muted" style="text-align:center; padding:2rem;">No keys yet. Click "+ New Key" to create one.</p>'; return; }
+            keys.forEach(k => {
+                const d = document.createElement('div');
+                d.className = 'key-card';
+                d.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <strong>${k.name}</strong>
+                        <span class="badge gray">Uses today: ${k.uses_today}</span>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <input type="text" value="${k.key_value}" readonly class="key-input" style="flex:1;">
+                        <button class="btn outline" style="padding:0.3rem 0.7rem; font-size:0.8rem; white-space:nowrap;" onclick="navigator.clipboard.writeText('${k.key_value}');showToast('Copied to clipboard','success')">Copy</button>
+                    </div>`;
+                list.appendChild(d);
+            });
         }
-        
+
         async function generateKey() {
-            await fetch('/api/v1/keys', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name: 'New Key'})});
-            fetchKeys();
+            await fetch('/api/v1/keys', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name:'New Key'})});
+            showToast('API key created', 'success'); fetchKeys();
         }
     </script>
 </body>
