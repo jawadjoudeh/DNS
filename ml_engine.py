@@ -15,6 +15,8 @@ import joblib
 from sklearn.ensemble import RandomForestClassifier, IsolationForest
 from sklearn.model_selection import StratifiedShuffleSplit
 from sklearn.metrics import precision_score, recall_score, f1_score, confusion_matrix
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
 
 logger = logging.getLogger(__name__)
 
@@ -39,9 +41,10 @@ _CACHE_MAX                  = 10_000
 _CACHE_TTL                  = 300
 _BLACKLIST_TTL              = 300
 
-# Expected fraction of genuine outliers in the Tranco training corpus.
-# Tranco is not perfectly clean (some typosquat/spam domains slip through), so 2% is conservative.
-_CONTAMINATION = 0.02
+# Let sklearn decide the optimal contamination threshold based on the data.
+# "auto" uses the offset-based method from the original IsolationForest paper,
+# which is more principled than a hardcoded value.
+_CONTAMINATION = "auto"
 
 # ---------------------------------------------------------------------------
 # Feature definitions
@@ -455,12 +458,15 @@ def train_async():
         logger.info("Lexical training set: %d  test set: %d", len(X_tr), len(X_te))
 
         TRAINING_STATUS.update({"stage": "Training IsolationForest…", "progress": 22})
-        clf_lex = IsolationForest(
-            n_estimators=200,
-            contamination=_CONTAMINATION,
-            random_state=42,
-            n_jobs=-1,
-        )
+        clf_lex = Pipeline([
+            ("scaler", StandardScaler()),
+            ("iforest", IsolationForest(
+                n_estimators=200,
+                contamination=_CONTAMINATION,
+                random_state=42,
+                n_jobs=-1,
+            )),
+        ])
         clf_lex.fit(X_tr)
 
         TRAINING_STATUS.update({"stage": "Evaluating lexical anomaly detector…", "progress": 40})
@@ -813,5 +819,5 @@ def start_auto_retrain():
                     _last_retrain_count = count
                     train()
             except Exception:
-                pass
+                logger.exception("Auto-retrain check failed")
     threading.Thread(target=loop, daemon=True).start()

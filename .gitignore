@@ -13,6 +13,8 @@ dns_data/
 models/flow_classifier.pkl
 models/dns_classifier.pkl
 models/unified_classifier.pkl
+models/*.bak
+models/*.incompatible
 
 # ── Python cache ──────────────────────────────────────────
 __pycache__/
