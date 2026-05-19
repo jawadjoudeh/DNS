@@ -1,0 +1,202 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings – SecureDNS Guard</title>
+        <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+    <link rel="stylesheet" href="/assets/css/style.css">
+    <style>
+        .setting-group { margin-bottom: 2rem; }
+        .setting-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 2rem; padding: 1.25rem 0; border-bottom: 1px solid var(--border-color); }
+        .setting-row:last-child { border-bottom: none; }
+        .setting-label { font-weight: 600; margin-bottom: 0.25rem; }
+        .setting-desc { color: var(--text-secondary); font-size: 0.85rem; line-height: 1.5; }
+        .setting-control { flex-shrink: 0; min-width: 200px; text-align: right; }
+
+        .toggle-switch { position: relative; width: 44px; height: 24px; display: inline-block; }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .toggle-slider { position: absolute; inset: 0; background: var(--border-color); border-radius: 24px; cursor: pointer; transition: 0.2s; }
+        .toggle-slider::before { content: ''; position: absolute; width: 18px; height: 18px; left: 3px; top: 3px; background: white; border-radius: 50%; transition: 0.2s; }
+        .toggle-switch input:checked + .toggle-slider { background: var(--accent); }
+        .toggle-switch input:checked + .toggle-slider::before { transform: translateX(20px); }
+
+        .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: #fff; animation: spin 1s linear infinite; vertical-align: middle; margin-right: 0.5rem; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="app-layout">
+        <aside class="sidebar" id="sidebar"></aside>
+        <div class="sidebar-overlay"></div>
+
+        <main class="main-wrapper">
+            <header class="topbar" id="topbar"></header>
+
+            <div class="content">
+                <div class="page-header"><h1 class="page-title">Settings</h1></div>
+
+                <!-- Protection settings -->
+                <div class="card mb-4">
+                    <div class="card-header"><h2 class="card-title">DNS settings</h2></div>
+
+                    <div class="setting-row">
+                        <div>
+                            <div class="setting-label">Blocking threshold</div>
+                            <div class="setting-desc">Domains with ML confidence above this level are blocked. Lower = more aggressive.</div>
+                            <div class="mt-2" id="threshold-val-text" style="font-weight:600; color: var(--accent);">85%</div>
+                        </div>
+                        <div class="setting-control">
+                            <input type="range" id="threshold-slider" min="50" max="99" value="85" step="1" style="margin:0; width:100%;">
+                        </div>
+                    </div>
+
+                    <div class="setting-row">
+                        <div>
+                            <div class="setting-label">Auto-retrain model</div>
+                            <div class="setting-desc">Periodically retrain the ML model with new traffic data.</div>
+                        </div>
+                        <div class="setting-control">
+                            <label class="toggle-switch"><input type="checkbox" id="toggle-retrain"><span class="toggle-slider"></span></label>
+                        </div>
+                    </div>
+
+                    <div class="setting-row">
+                        <div>
+                            <div class="setting-label">Upstream DNS-over-HTTPS provider</div>
+                            <div class="setting-desc">Safe queries are forwarded to this encrypted DNS provider.</div>
+                        </div>
+                        <div class="setting-control">
+                            <select id="doh-provider" style="margin:0; width:100%;">
+                                <option value="cloudflare">Cloudflare (1.1.1.1)</option>
+                                <option value="google">Google (8.8.8.8)</option>
+                                <option value="quad9">Quad9 (9.9.9.9)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Admin-only: Blacklist + Retrain -->
+                <div id="admin-extra" style="display:none;">
+                    <div class="grid-2 mb-4">
+                        <div class="card">
+                            <div class="card-header"><h2 class="card-title">Custom filtering rules</h2></div>
+                            <div class="d-flex gap-2 mb-3">
+                                <input type="text" id="bl-domain" placeholder="malware.example.com" style="margin:0; flex:1;">
+                                <button class="btn" onclick="addBlacklist()" style="white-space:nowrap;">Add rule</button>
+                            </div>
+                            <div class="table-responsive" style="margin:0;">
+                                <table id="bl-table">
+                                    <thead><tr><th style="background:transparent;">Domain</th><th style="width:80px; background:transparent;">Action</th></tr></thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header"><h2 class="card-title">ML model</h2></div>
+                            <p class="text-muted mb-3" style="font-size:0.875rem;">Manually trigger a full retrain of the dual ML models (IsolationForest + RandomForest) with the latest data.</p>
+                            <button class="btn outline" id="retrain-btn" onclick="retrainModel()">Retrain model now</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="user-notice" class="card" style="display:none; padding: 1rem 1.5rem; background: var(--accent-dim); border: 1px solid var(--accent); border-radius: var(--border-radius-sm);">
+                    <p style="margin:0; font-size:0.875rem; color:var(--accent);">These settings are managed by the administrator. Values shown are read-only.</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/assets/js/main.js"></script>
+    <script>
+        let saveTimeout;
+
+        document.addEventListener("DOMContentLoaded", async () => {
+            const me = await checkAuth();
+            if (!me) return;
+            document.getElementById('sidebar').innerHTML = renderSidebar(me.is_admin);
+            document.getElementById('topbar').innerHTML = renderTopbar(me);
+            setActiveNavLink(); initMobileMenu(); if (me.is_admin) {
+                document.getElementById('admin-extra').style.display = 'block';
+                fetchBlacklist();
+            } else {
+                document.getElementById('user-notice').style.display = 'block';
+                ['threshold-slider','toggle-retrain','doh-provider'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) { el.disabled = true; el.style.opacity = '0.5'; }
+                });
+            }
+            loadSettings();
+        });
+
+        /* ── Settings ── */
+        async function loadSettings() {
+            const res = await fetch('/api/settings');
+            if (!res.ok) return;
+            const s = await res.json();
+            document.getElementById('threshold-slider').value = s.threshold || 85;
+            document.getElementById('toggle-retrain').checked = s.auto_retrain !== false;
+            document.getElementById('doh-provider').value = s.doh_provider || 'cloudflare';
+            updateThresholdText();
+        }
+
+        function updateThresholdText() {
+            const v = document.getElementById('threshold-slider').value;
+            document.getElementById('threshold-val-text').textContent = v + '%';
+        }
+
+        document.getElementById('threshold-slider').addEventListener('input', () => {
+            updateThresholdText();
+            debounceSave();
+        });
+        document.getElementById('toggle-autoblock').addEventListener('change', () => saveSettings());
+        document.getElementById('toggle-retrain').addEventListener('change', () => saveSettings());
+        document.getElementById('doh-provider').addEventListener('change', () => saveSettings());
+
+        function debounceSave() { clearTimeout(saveTimeout); saveTimeout = setTimeout(saveSettings, 500); }
+
+        async function saveSettings() {
+            const data = {
+                threshold:    parseInt(document.getElementById('threshold-slider').value),
+                auto_retrain: document.getElementById('toggle-retrain').checked,
+                doh_provider: document.getElementById('doh-provider').value
+            };
+            const res = await fetch('/api/settings', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
+            if (res.ok) showToast('Settings saved', 'success');
+            else showToast('Failed to save settings', 'error');
+        }
+
+        /* ── Blacklist ── */
+        async function fetchBlacklist() {
+            try {
+                const res = await fetch('/api/blacklist');
+                if (!res.ok) return;
+                const list = await res.json();
+                const tb = document.querySelector('#bl-table tbody');
+                if (list.length === 0) { tb.innerHTML = '<tr><td colspan="2" class="text-muted" style="text-align:center;">No rules.</td></tr>'; return; }
+                tb.innerHTML = list.map(item =>
+                    `<tr><td style="font-family:monospace;">${item.domain}</td><td><button class="btn outline danger" style="padding:0.2rem 0.5rem;font-size:0.75rem;" onclick="removeBlacklist('${item.domain}')">Del</button></td></tr>`
+                ).join('');
+            } catch {}
+        }
+        async function addBlacklist() {
+            const d = document.getElementById('bl-domain').value; if (!d) return;
+            await fetch('/api/blacklist/add', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({domain:d})});
+            document.getElementById('bl-domain').value = ''; showToast('Rule added', 'success'); fetchBlacklist();
+        }
+        async function removeBlacklist(d) {
+            await fetch('/api/blacklist/remove', {method:'DELETE', headers:{'Content-Type':'application/json'}, body:JSON.stringify({domain:d})});
+            showToast('Rule removed', 'success'); fetchBlacklist();
+        }
+        async function retrainModel() {
+            const btn = document.getElementById('retrain-btn');
+            btn.innerHTML = '<span class="spinner"></span> Training…'; btn.disabled = true;
+            try {
+                const res = await fetch('/api/model/retrain', {method:'POST'});
+                if (res.ok) showToast('Model retrained', 'success'); else showToast('Retrain failed', 'error');
+            } catch { showToast('Network error', 'error'); }
+            btn.innerHTML = 'Retrain model now'; btn.disabled = false;
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SecureDNS Guard – AI-Powered DNS Security</title>
+    <meta name="description" content="SecureDNS Guard uses Machine Learning to inspect DNS queries in real-time, block malicious domains, and encrypt safe traffic with DNS-over-HTTPS.">
+    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg:          #0e1511;
+            --bg-card:     rgba(22, 29, 25, 0.6);
+            --bg-elevated: rgba(22, 33, 27, 0.75);
+            --accent:      #10B981;
+            --accent-hover:#0ea572;
+            --accent-dim:  rgba(16, 185, 129, 0.08);
+            --accent-glow: rgba(16, 185, 129, 0.2);
+            --accent-edge: rgba(16, 185, 129, 0.3);
+            --text-1:      #f1f5f9;
+            --text-2:      #94a3b8;
+            --text-3:      #64748b;
+            --text-4:      #475569;
+            --border:      rgba(255, 255, 255, 0.05);
+            --border-acc:  rgba(16, 185, 129, 0.25);
+            --danger:      #ef4444;
+            --font: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
+            --r:  10px;
+            --r-lg: 16px;
+            --r-xl: 20px;
+        }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: var(--font);
+            background-color: var(--bg);
+            background-image: radial-gradient(circle at 50% 0%, rgba(16,185,129,0.04) 0%, transparent 55%);
+            background-attachment: fixed;
+            color: var(--text-1);
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        a { color: inherit; text-decoration: none; }
+        img, svg { display: block; }
+
+        .container { max-width: 1280px; margin: 0 auto; padding: 0 5%; }
+
+        /* ── Glass surface ── */
+        .glass {
+            background: var(--bg-card);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 0.5px solid var(--border);
+            border-radius: var(--r-lg);
+        }
+
+        /* ── Buttons ── */
+        .btn {
+            display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;
+            padding: 0.7rem 1.6rem;
+            font-family: var(--font); font-size: 0.9rem; font-weight: 700;
+            border-radius: var(--r); cursor: pointer; border: none;
+            transition: filter 0.18s, box-shadow 0.18s, background 0.18s, color 0.18s;
+            position: relative; overflow: hidden; white-space: nowrap;
+            letter-spacing: -0.01em;
+        }
+        .btn-primary {
+            background: var(--accent);
+            color: #042010;
+        }
+        .btn-primary:hover {
+            filter: brightness(1.08);
+            box-shadow: 0 0 18px var(--accent-glow), 0 4px 16px rgba(16,185,129,0.15);
+        }
+        .btn-primary:active { animation: btn-pulse 0.4s ease; }
+
+        .btn-ghost {
+            background: transparent;
+            color: var(--text-1);
+            border: 1px solid var(--border-acc);
+        }
+        .btn-ghost:hover {
+            background: var(--accent-dim);
+            border-color: var(--accent);
+        }
+
+        .btn-outline-muted {
+            background: transparent;
+            color: var(--text-2);
+            border: 0.5px solid var(--border);
+        }
+        .btn-outline-muted:hover { color: var(--text-1); border-color: rgba(255,255,255,0.1); }
+
+        @keyframes btn-pulse {
+            0%   { box-shadow: 0 0 0 0 rgba(16,185,129,0.45); }
+            100% { box-shadow: 0 0 0 22px rgba(16,185,129,0); }
+        }
+
+        /* ── Pulse dot ── */
+        .pulse-dot {
+            width: 6px; height: 6px; border-radius: 50%;
+            background: var(--accent);
+            animation: pulse-ring 2s ease-in-out infinite;
+            flex-shrink: 0;
+        }
+        @keyframes pulse-ring {
+            0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 0 0 rgba(16,185,129,0.4); }
+            50%       { opacity: 0.7; transform: scale(0.85); box-shadow: 0 0 0 5px rgba(16,185,129,0); }
+        }
+
+        
+        .topnav {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+            height: 64px;
+            background: rgba(14, 21, 17, 0.82);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 0.5px solid var(--border);
+            transition: background 0.3s;
+        }
+        .topnav-inner {
+            height: 100%; max-width: 1280px; margin: 0 auto; padding: 0 5%;
+            display: flex; align-items: center; gap: 1.5rem;
+        }
+        .nav-brand {
+            display: flex; align-items: center; gap: 0.65rem;
+            font-weight: 800; font-size: 0.975rem; letter-spacing: -0.025em;
+            flex-shrink: 0; color: var(--text-1);
+        }
+        .nav-logo-box {
+            width: 32px; height: 32px; border-radius: 8px;
+            background: linear-gradient(135deg, var(--accent) 0%, #059669 100%);
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 0 14px rgba(16,185,129,0.3);
+            flex-shrink: 0;
+        }
+        .nav-logo-box svg { width: 18px; height: 18px; }
+
+        .nav-status-badge {
+            display: flex; align-items: center; gap: 0.4rem;
+            padding: 0.22rem 0.75rem;
+            background: rgba(16,185,129,0.07);
+            border: 1px solid rgba(16,185,129,0.14);
+            border-radius: 100px;
+            font-size: 0.62rem; font-weight: 800; letter-spacing: 0.1em;
+            text-transform: uppercase; color: var(--accent);
+            flex-shrink: 0;
+        }
+
+        .nav-links {
+            flex: 1; display: flex; justify-content: center; gap: 0.15rem;
+        }
+        .nav-link {
+            padding: 0.4rem 0.9rem; border-radius: 8px;
+            font-size: 0.875rem; font-weight: 600; color: var(--text-2);
+            transition: color 0.18s, background 0.18s;
+        }
+        .nav-link:hover { color: var(--text-1); background: rgba(255,255,255,0.04); }
+
+        .nav-actions { display: flex; align-items: center; gap: 0.65rem; flex-shrink: 0; }
+        .nav-hamburger {
+            display: none; background: none; border: 1px solid var(--border-acc);
+            color: var(--text-1); font-size: 1.1rem; cursor: pointer;
+            border-radius: 8px; padding: 0.35rem 0.65rem; line-height: 1;
+            transition: background 0.18s;
+        }
+        .nav-hamburger:hover { background: var(--accent-dim); }
+        .mobile-nav {
+            display: none; position: fixed; top: 64px; left: 0; right: 0;
+            background: rgba(14,21,17,0.97); backdrop-filter: blur(20px);
+            border-bottom: 0.5px solid var(--border);
+            padding: 1rem 5%; flex-direction: column; gap: 0.25rem; z-index: 999;
+        }
+        .mobile-nav.open { display: flex; }
+        .mobile-nav a {
+            padding: 0.75rem 1rem; border-radius: 8px;
+            font-size: 0.9rem; font-weight: 600; color: var(--text-2);
+            transition: color 0.18s, background 0.18s;
+        }
+        .mobile-nav a:hover { color: var(--text-1); background: rgba(255,255,255,0.04); }
+        .nav-signin {
+            font-size: 0.875rem; font-weight: 600; color: var(--text-2);
+            padding: 0.4rem 0.9rem; border-radius: 8px;
+            transition: color 0.18s, background 0.18s;
+        }
+        .nav-signin:hover { color: var(--text-1); background: rgba(255,255,255,0.04); }
+
+        
+        .hero {
+            min-height: calc(100vh - 64px);
+            margin-top: 64px;
+            display: flex; align-items: center;
+            padding: 3rem 5%;
+            position: relative; overflow: hidden;
+        }
+        .hero-glow {
+            position: absolute; top: -80px; right: -60px;
+            width: 700px; height: 700px; pointer-events: none; z-index: 0;
+            background: radial-gradient(ellipse 65% 65% at 70% 40%,
+                rgba(16,185,129,0.10) 0%, transparent 70%);
+        }
+        .hero-inner {
+            width: 100%; max-width: 1280px; margin: 0 auto;
+            display: grid; grid-template-columns: 1fr 1fr;
+            gap: 3.5rem; align-items: center;
+            position: relative; z-index: 1;
+        }
+        .hero-left  { text-align: left; }
+        .hero-right { position: relative; }
+
+        .hero-eyebrow {
+            display: inline-flex; align-items: center; gap: 0.5rem;
+            padding: 0.28rem 0.85rem;
+            background: rgba(16,185,129,0.07);
+            border: 1px solid rgba(16,185,129,0.16);
+            border-radius: 100px;
+            font-size: 0.68rem; font-weight: 800; letter-spacing: 0.09em;
+            text-transform: uppercase; color: var(--accent);
+            margin-bottom: 1.75rem;
+        }
+        .hero-h1 {
+            font-size: clamp(2.2rem, 4.5vw, 3.75rem);
+            font-weight: 800; letter-spacing: -0.05em; line-height: 1.07;
+            margin-bottom: 1.25rem;
+        }
+        .hero-h1 .text-white-grad {
+            background: linear-gradient(160deg, #f1f5f9 20%, #94a3b8 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+        .hero-h1 .text-emerald-grad {
+            background: linear-gradient(135deg, var(--accent) 0%, #34d399 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+        .hero-sub {
+            font-size: 1rem; color: var(--text-2);
+            max-width: 480px; line-height: 1.8; margin-bottom: 2rem;
+        }
+        .hero-cta { display: flex; gap: 0.8rem; flex-wrap: wrap; margin-bottom: 1.75rem; }
+        .hero-cta .btn { padding: 0.8rem 1.75rem; font-size: 0.92rem; border-radius: 12px; }
+        .hero-trust {
+            display: flex; gap: 1.25rem; flex-wrap: wrap;
+            font-size: 0.75rem; color: var(--text-4); font-weight: 600;
+        }
+        .hero-trust span { display: inline-flex; align-items: center; gap: 0.3rem; }
+        .hero-trust .ck { color: var(--accent); }
+
+        /* ── Right-column live monitor ── */
+        .hero-monitor {
+            padding: 1.1rem 1.2rem;
+            border-radius: 16px !important;
+        }
+        .monitor-head {
+            display: flex; align-items: center; justify-content: space-between;
+            padding-bottom: 0.75rem;
+            border-bottom: 0.5px solid var(--border);
+            margin-bottom: 0.55rem;
+        }
+        .monitor-head-left { display: flex; align-items: center; gap: 0.45rem; }
+        .monitor-head-left span {
+            font-size: 0.68rem; font-weight: 700; letter-spacing: 0.07em;
+            text-transform: uppercase; color: var(--text-2);
+        }
+        .monitor-count { font-size: 0.65rem; color: var(--text-4); font-variant-numeric: tabular-nums; }
+        .monitor-rows { display: flex; flex-direction: column; gap: 0.22rem; }
+        .monitor-row {
+            display: flex; align-items: center; gap: 0.6rem;
+            padding: 0.5rem 0.6rem; border-radius: 7px;
+            font-size: 0.73rem;
+            opacity: 1; transform: translateY(0);
+            transition: opacity 0.28s ease, transform 0.28s ease;
+            border: 0.5px solid transparent;
+        }
+        .monitor-row.entering { opacity: 0; transform: translateY(-10px); }
+        .monitor-row.is-safe    { background: rgba(16,185,129,0.05); border-color: rgba(16,185,129,0.1); }
+        .monitor-row.is-blocked { background: rgba(239,68,68,0.05);  border-color: rgba(239,68,68,0.1); }
+        .mverdict { font-weight: 800; width: 14px; text-align: center; flex-shrink: 0; font-size: 0.8rem; }
+        .mverdict.v-safe  { color: var(--accent); }
+        .mverdict.v-block { color: var(--danger); }
+        .mdomain { flex: 1; color: var(--text-2); font-family: 'Courier New', monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.75rem; }
+        .mbadge { font-size: 0.56rem; font-weight: 800; letter-spacing: 0.07em; padding: 0.15rem 0.5rem; border-radius: 4px; flex-shrink: 0; }
+        .mbadge.v-safe  { background: rgba(16,185,129,0.12); color: var(--accent); }
+        .mbadge.v-block { background: rgba(239,68,68,0.12);  color: var(--danger); }
+        .mtime { color: var(--text-4); flex-shrink: 0; font-family: 'Courier New', monospace; min-width: 2.5rem; text-align: right; font-size: 0.7rem; }
+        .monitor-footer {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-top: 0.9rem; padding-top: 0.75rem;
+            border-top: 0.5px solid var(--border);
+        }
+        .monitor-stat { text-align: center; }
+        .monitor-stat-val { font-size: 1.05rem; font-weight: 800; color: var(--accent); letter-spacing: -0.04em; }
+        .monitor-stat-lbl { font-size: 0.6rem; color: var(--text-4); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; margin-top: 0.1rem; }
+
+        
+        .feed-section { padding-bottom: 4rem; overflow: hidden; }
+        .feed-label {
+            text-align: center; font-size: 0.6rem; font-weight: 700;
+            letter-spacing: 0.14em; text-transform: uppercase;
+            color: var(--text-4); margin-bottom: 1rem;
+        }
+        .feed-mask {
+            mask-image: linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%);
+            -webkit-mask-image: linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%);
+            overflow: hidden;
+        }
+        .feed-track {
+            display: flex; gap: 0.5rem;
+            width: max-content;
+            animation: marquee 38s linear infinite;
+        }
+        .feed-track:hover { animation-play-state: paused; }
+        @keyframes marquee {
+            0%   { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+        .feed-chip {
+            flex-shrink: 0;
+            display: inline-flex; align-items: center; gap: 0.45rem;
+            padding: 0.35rem 0.8rem;
+            background: var(--bg-card);
+            border: 0.5px solid var(--border);
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.72rem; white-space: nowrap; cursor: default;
+        }
+        .feed-chip.is-blocked { border-color: rgba(239,68,68,0.18); }
+        .feed-chip.is-safe    { border-color: rgba(16,185,129,0.15); }
+        .chip-ts   { color: var(--text-4); }
+        .chip-stat { font-weight: 700; }
+        .chip-stat.block { color: var(--danger); }
+        .chip-stat.safe  { color: var(--accent); }
+        .chip-domain { color: var(--text-2); }
+        .chip-ip  { color: var(--text-4); }
+        .chip-conf { color: var(--text-4); }
+
+        
+        .stats-bar {
+            background: rgba(22,29,25,0.45);
+            backdrop-filter: blur(8px);
+            border-top: 0.5px solid var(--border);
+            border-bottom: 0.5px solid var(--border);
+        }
+        .stats-inner {
+            max-width: 1280px; margin: 0 auto; padding: 3.25rem 5%;
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 2rem;
+            text-align: center;
+        }
+        .stat-cell { position: relative; }
+        .stat-cell + .stat-cell::before {
+            content: '';
+            position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+            width: 0.5px; height: 38px; background: var(--border);
+        }
+        .stat-num {
+            font-size: 2.4rem; font-weight: 800; letter-spacing: -0.055em;
+            color: var(--accent); line-height: 1; margin-bottom: 0.45rem;
+        }
+        .stat-num sup { font-size: 1.1rem; vertical-align: top; padding-top: 0.45rem; display: inline-block; letter-spacing: 0; }
+        .stat-lbl { font-size: 0.73rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-3); }
+        .stat-sub { font-size: 0.68rem; color: var(--text-4); margin-top: 0.18rem; }
+
+        
+        .section { padding: 4.5rem 0; }
+
+        .section-eyebrow {
+            display: inline-block;
+            font-size: 0.62rem; font-weight: 800; letter-spacing: 0.14em;
+            text-transform: uppercase; color: var(--accent);
+            margin-bottom: 0.7rem;
+        }
+        .section-h2 {
+            font-size: clamp(1.65rem, 3vw, 2.25rem);
+            font-weight: 800; letter-spacing: -0.04em;
+            margin-bottom: 0.75rem; color: var(--text-1);
+        }
+        .section-p {
+            font-size: 0.975rem; color: var(--text-2);
+            line-height: 1.8; max-width: 520px;
+        }
+
+        
+        .steps-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr);
+            gap: 1.25rem; margin-top: 3.5rem;
+        }
+        .step-card {
+            padding: 2.25rem 2rem;
+            transition: transform 0.25s ease, border-color 0.25s ease;
+        }
+        .step-card:hover { transform: translateY(-5px); border-color: var(--border-acc) !important; }
+        .step-num {
+            font-size: 3.25rem; font-weight: 800; letter-spacing: -0.06em;
+            color: rgba(16,185,129,0.14); line-height: 1; margin-bottom: 1.15rem;
+            font-variant-numeric: tabular-nums;
+        }
+        .step-title { font-size: 1.025rem; font-weight: 700; margin-bottom: 0.6rem; color: var(--text-1); }
+        .step-desc  { font-size: 0.875rem; color: var(--text-2); line-height: 1.75; }
+
+        
+        .features-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr);
+            gap: 1.25rem; margin-top: 3.5rem;
+        }
+        .feat-card {
+            padding: 1.85rem 1.75rem;
+            transition: transform 0.25s ease, border-color 0.25s ease;
+        }
+        .feat-card:hover { transform: translateY(-4px); border-color: var(--border-acc) !important; }
+
+        .feat-icon-wrap {
+            width: 44px; height: 44px; border-radius: 10px;
+            background: var(--accent-dim);
+            border: 1px solid rgba(16,185,129,0.12);
+            display: flex; align-items: center; justify-content: center;
+            margin-bottom: 1.1rem;
+        }
+        .feat-icon-wrap svg {
+            width: 20px; height: 20px;
+            stroke: var(--accent); fill: none;
+            stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round;
+        }
+        .feat-title { font-size: 0.95rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-1); }
+        .feat-desc  { font-size: 0.855rem; color: var(--text-2); line-height: 1.75; }
+
+        
+        .pricing-grid {
+            display: grid; grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem; max-width: 860px; margin: 3.5rem auto 0;
+        }
+        .price-card { padding: 2.5rem 2.25rem; position: relative; }
+        .price-card.pro {
+            border-color: var(--border-acc) !important;
+            background: rgba(12, 36, 22, 0.65);
+        }
+
+        .popular-badge {
+            position: absolute; top: -1px; left: 50%; transform: translateX(-50%);
+            background: var(--accent); color: #042010;
+            font-size: 0.58rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase;
+            padding: 0.22rem 0.9rem; border-radius: 0 0 9px 9px;
+        }
+
+        .price-tier {
+            font-size: 0.65rem; font-weight: 800; letter-spacing: 0.1em;
+            text-transform: uppercase; color: var(--text-3); margin-bottom: 0.6rem;
+        }
+        .price-tier.pro { color: var(--accent); }
+        .price-amount {
+            display: flex; align-items: flex-start; gap: 0.1rem;
+            line-height: 1; margin-bottom: 0.3rem;
+        }
+        .price-currency {
+            font-size: 1.1rem; font-weight: 700; color: var(--text-2);
+            padding-top: 0.5rem;
+        }
+        .price-figure {
+            font-size: 3rem; font-weight: 800; letter-spacing: -0.06em;
+            color: var(--text-1);
+        }
+        .price-period { font-size: 0.78rem; color: var(--text-3); margin-bottom: 1.75rem; }
+        .price-divider { height: 0.5px; background: var(--border); margin-bottom: 1.75rem; }
+        .price-divider.green { background: var(--border-acc); }
+
+        .price-list { list-style: none; display: flex; flex-direction: column; gap: 0.85rem; margin-bottom: 2.25rem; }
+        .price-list li {
+            display: flex; align-items: flex-start; gap: 0.65rem;
+            font-size: 0.875rem; color: var(--text-2);
+        }
+        .price-list li.dim { color: var(--text-4); }
+        .pcheck {
+            flex-shrink: 0; margin-top: 1px;
+            width: 17px; height: 17px; border-radius: 50%;
+            background: rgba(16,185,129,0.1);
+            border: 1px solid rgba(16,185,129,0.22);
+            display: flex; align-items: center; justify-content: center;
+        }
+        .pcheck svg { width: 9px; height: 9px; stroke: var(--accent); fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+        .price-list li.dim .pcheck { background: rgba(255,255,255,0.03); border-color: var(--border); }
+        .price-list li.dim .pcheck svg { stroke: var(--text-4); }
+
+        .price-cta { width: 100%; }
+
+        
+        .footer {
+            border-top: 0.5px solid var(--border);
+            padding: 4rem 0 2.25rem;
+        }
+        .footer-grid {
+            display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 3rem;
+            margin-bottom: 3rem;
+        }
+        .footer-brand-name {
+            display: flex; align-items: center; gap: 0.6rem;
+            font-weight: 800; font-size: 0.95rem; letter-spacing: -0.02em;
+            margin-bottom: 0.8rem;
+        }
+        .footer-logo-box {
+            width: 28px; height: 28px; border-radius: 7px;
+            background: linear-gradient(135deg, var(--accent), #059669);
+            display: flex; align-items: center; justify-content: center;
+        }
+        .footer-logo-box svg { width: 15px; height: 15px; }
+        .footer-tagline { font-size: 0.84rem; color: var(--text-3); line-height: 1.7; max-width: 260px; }
+        .footer-col-head {
+            font-size: 0.65rem; font-weight: 800; letter-spacing: 0.1em;
+            text-transform: uppercase; color: var(--text-4); margin-bottom: 1.1rem;
+        }
+        .footer-links { list-style: none; display: flex; flex-direction: column; gap: 0.65rem; }
+        .footer-links a { font-size: 0.865rem; color: var(--text-2); transition: color 0.18s; }
+        .footer-links a:hover { color: var(--accent); }
+        .footer-bottom {
+            display: flex; align-items: center; justify-content: space-between;
+            padding-top: 1.75rem; border-top: 0.5px solid var(--border);
+            font-size: 0.78rem; color: var(--text-4);
+        }
+
+        
+        .reveal {
+            opacity: 0; transform: translateY(22px);
+            transition: opacity 0.55s ease, transform 0.55s ease;
+        }
+        .reveal.in { opacity: 1; transform: none; }
+
+        
+        @media (max-width: 960px) {
+            .nav-links { display: none; }
+            .nav-hamburger { display: block; }
+            .hero-inner { grid-template-columns: 1fr; gap: 2.5rem; }
+            .hero-left  { text-align: center; }
+            .hero-cta   { justify-content: center; }
+            .hero-trust { justify-content: center; }
+            .hero-sub   { max-width: 100%; margin-left: auto; margin-right: auto; }
+            .steps-grid { grid-template-columns: 1fr; }
+            .features-grid { grid-template-columns: repeat(2, 1fr); }
+            .stats-inner { grid-template-columns: repeat(2, 1fr); }
+            .footer-grid { grid-template-columns: 1fr 1fr; gap: 2rem; }
+        }
+        @media (max-width: 620px) {
+            .hero { padding: 2rem 5%; }
+            .features-grid { grid-template-columns: 1fr; }
+            .pricing-grid  { grid-template-columns: 1fr; }
+            .footer-grid   { grid-template-columns: 1fr; }
+            .footer-bottom { flex-direction: column; gap: 0.5rem; text-align: center; }
+            .hero-cta .btn { width: 100%; max-width: 300px; }
+            .stats-inner { grid-template-columns: repeat(2, 1fr); gap: 1.5rem; }
+            .stat-cell + .stat-cell::before { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+     TOP NAV
+══════════════════════════════════════════ -->
+<nav class="topnav" id="topnav">
+    <div class="topnav-inner">
+        <a href="/" class="nav-brand">
+            <div class="nav-logo-box">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#042010" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            </div>
+            SecureDNS Guard
+        </a>
+
+        <div class="nav-links">
+            <a href="#how-it-works" class="nav-link">How it works</a>
+            <a href="#features"     class="nav-link">Features</a>
+            <a href="#pricing"      class="nav-link">Pricing</a>
+            <a href="/help"         class="nav-link">Help</a>
+        </div>
+
+        <div class="nav-actions">
+            <a href="/login"    class="nav-signin">Sign In</a>
+            <a href="/register" class="btn btn-primary" style="padding:0.5rem 1.2rem; font-size:0.85rem; border-radius:9px;">Get Started Free</a>
+            <button class="nav-hamburger" id="hamburger" aria-label="Open menu">☰</button>
+        </div>
+    </div>
+</nav>
+
+<div class="mobile-nav" id="mobile-nav">
+    <a href="#how-it-works" onclick="closeMobileNav()">How it works</a>
+    <a href="#features"     onclick="closeMobileNav()">Features</a>
+    <a href="#pricing"      onclick="closeMobileNav()">Pricing</a>
+    <a href="/help"         onclick="closeMobileNav()">Help</a>
+    <a href="/login"        onclick="closeMobileNav()">Sign In</a>
+    <a href="/register"     class="btn btn-primary" style="margin-top:0.5rem;text-align:center;">Get Started Free</a>
+</div>
+
+
+<!-- ══════════════════════════════════════════
+     HERO
+══════════════════════════════════════════ -->
+<section class="hero">
+    <div class="hero-glow"></div>
+    <div class="hero-inner">
+
+        <!-- Left: text content -->
+        <div class="hero-left">
+
+            <h1 class="hero-h1">
+                <span class="text-white-grad">Your Network,</span><br>
+                <span class="text-emerald-grad">Defended by AI</span>
+            </h1>
+            <p class="hero-sub">
+                SecureDNS Guard inspects every DNS query in real-time using a dual ML pipeline (IsolationForest + RandomForest),
+                blocks malicious domains instantly, and forwards safe traffic through encrypted DNS-over-HTTPS.
+            </p>
+            <div class="hero-cta">
+                <a href="/register" class="btn btn-primary">Start for Free →</a>
+                <a href="#how-it-works" class="btn btn-ghost">How it works</a>
+            </div>
+            <div class="hero-trust">
+                <span><span class="ck">✓</span> No hardware required</span>
+                <span><span class="ck">✓</span> &lt;5ms classification</span>
+                <span><span class="ck">✓</span> DoH encrypted</span>
+            </div>
+        </div>
+
+        <!-- Right: live DNS monitor -->
+        <div class="hero-right">
+            <div class="glass hero-monitor">
+                <div class="monitor-head">
+                    <div class="monitor-head-left">
+                        <span class="pulse-dot"></span>
+                        <span>Live DNS Monitor</span>
+                    </div>
+                    <span class="monitor-count" id="mon-count">0 queries</span>
+                </div>
+                <div class="monitor-rows" id="mon-rows"></div>
+                <div class="monitor-footer">
+                    <div class="monitor-stat">
+                        <div class="monitor-stat-val">{{ "%.1f"|format(accuracy) }}%</div>
+                        <div class="monitor-stat-lbl">Accuracy</div>
+                    </div>
+                    <div class="monitor-stat">
+                        <div class="monitor-stat-val">{{ "%.1f"|format(avg_latency) }}<span style="font-size:0.6em;">ms</span></div>
+                        <div class="monitor-stat-lbl">Latency</div>
+                    </div>
+                    <div class="monitor-stat">
+                        <div class="monitor-stat-val">DoH</div>
+                        <div class="monitor-stat-lbl">Encrypted</div>
+                    </div>
+                    <div class="monitor-stat">
+                        <div class="monitor-stat-val">10+</div>
+                        <div class="monitor-stat-lbl">Features</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</section>
+
+
+
+
+
+<!-- ══════════════════════════════════════════
+     STATS BAR
+══════════════════════════════════════════ -->
+<div class="stats-bar">
+    <div class="stats-inner">
+        <div class="stat-cell">
+            <div class="stat-num">
+                <span class="countup" data-end="{{ total_queries }}" data-dec="0" data-suffix="">0</span>
+            </div>
+            <div class="stat-lbl">Queries Analysed</div>
+            <div class="stat-sub">across all users</div>
+        </div>
+        <div class="stat-cell">
+            <div class="stat-num">
+                <span class="countup" data-end="{{ blocked_queries }}" data-dec="0" data-suffix="">0</span>
+            </div>
+            <div class="stat-lbl">Threats Blocked</div>
+            <div class="stat-sub">DGA, tunneling, malware</div>
+        </div>
+        <div class="stat-cell">
+            <div class="stat-num">
+                <span class="countup" data-end="{{ '%.1f'|format(accuracy) }}" data-dec="1" data-suffix="%">0</span>
+            </div>
+            <div class="stat-lbl">Model Accuracy</div>
+            <div class="stat-sub">IsolationForest + RandomForest</div>
+        </div>
+        <div class="stat-cell">
+            <div class="stat-num"><span class="countup" data-end="{{ '%.1f'|format(avg_latency) if avg_latency > 0 else 1 }}" data-dec="1" data-suffix="">0</span><sup>ms</sup></div>
+            <div class="stat-lbl">Detection Latency</div>
+            <div class="stat-sub">per DNS query</div>
+        </div>
+    </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════
+     HOW IT WORKS
+══════════════════════════════════════════ -->
+<section class="section" id="how-it-works">
+    <div class="container">
+        <div class="section-eyebrow">How it works</div>
+        <h2 class="section-h2">Three steps to protection</h2>
+        <p class="section-p">From raw DNS query to final verdict in milliseconds — here's what happens under the hood.</p>
+        <div class="steps-grid">
+            <div class="glass step-card reveal">
+                <div class="step-num">01</div>
+                <div class="step-title">Query Interception</div>
+                <div class="step-desc">A lightweight Python proxy listens on UDP port 53, capturing every DNS query from your machine before it reaches any upstream resolver — zero configuration required.</div>
+            </div>
+            <div class="glass step-card reveal" style="transition-delay:.1s;">
+                <div class="step-num">02</div>
+                <div class="step-title">ML Classification</div>
+                <div class="step-desc">10 lexical features — Shannon entropy, domain length, digit ratio, subdomain depth, TLD risk, and more — are extracted and scored by the IsolationForest anomaly detector in under 5 ms. DoH network flows use a separate RandomForest classifier.</div>
+            </div>
+            <div class="glass step-card reveal" style="transition-delay:.2s;">
+                <div class="step-num">03</div>
+                <div class="step-title">Block or Forward via DoH</div>
+                <div class="step-desc">Threats are blocked and logged with a feature breakdown. Safe domains are forwarded encrypted via DNS-over-HTTPS to Cloudflare, Google, or Quad9 — your ISP sees nothing.</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+
+<!-- ══════════════════════════════════════════
+     FEATURES
+══════════════════════════════════════════ -->
+<section class="section" id="features">
+    <div class="container">
+        <div class="section-eyebrow">Capabilities</div>
+        <h2 class="section-h2">Everything you need</h2>
+        <p class="section-p">Enterprise-grade DNS security built as a graduation project at the University of Jordan – KASIT.</p>
+        <div class="features-grid">
+
+            <div class="glass feat-card reveal">
+                <div class="feat-icon-wrap">
+                    <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                </div>
+                <div class="feat-title">Dual ML Pipeline</div>
+                <div class="feat-desc">An IsolationForest anomaly detector scores 10 lexical features per domain. A separate RandomForest classifier analyzes 29 DoH network-flow features — two independent layers of detection.</div>
+            </div>
+
+            <div class="glass feat-card reveal" style="transition-delay:.06s;">
+                <div class="feat-icon-wrap">
+                    <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                </div>
+                <div class="feat-title">DNS-over-HTTPS</div>
+                <div class="feat-desc">All safe traffic is forwarded encrypted via DoH to Cloudflare, Google, or Quad9. Your ISP, router, and any network observer see zero DNS queries.</div>
+            </div>
+
+            <div class="glass feat-card reveal" style="transition-delay:.12s;">
+                <div class="feat-icon-wrap">
+                    <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                </div>
+                <div class="feat-title">Live Dashboard</div>
+                <div class="feat-desc">Monitor every query in real time, inspect each blocked domain's ML feature breakdown, and track model accuracy, precision, recall, and F1 over time.</div>
+            </div>
+
+            <div class="glass feat-card reveal" style="transition-delay:.18s;">
+                <div class="feat-icon-wrap">
+                    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                </div>
+                <div class="feat-title">REST API</div>
+                <div class="feat-desc">Classify single domains or batches of up to 50 via API key authentication. Every response includes a confidence score and the top feature contributions.</div>
+            </div>
+
+            <div class="glass feat-card reveal" style="transition-delay:.24s;">
+                <div class="feat-icon-wrap">
+                    <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                </div>
+                <div class="feat-title">Multi-User & Roles</div>
+                <div class="feat-desc">Full admin panel for managing users, reviewing all logs, triggering model retraining, and auditing system activity — isolated from the standard user view.</div>
+            </div>
+
+            <div class="glass feat-card reveal" style="transition-delay:.3s;">
+                <div class="feat-icon-wrap">
+                    <svg viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+                </div>
+                <div class="feat-title">Continuous Retraining</div>
+                <div class="feat-desc">Admins trigger on-demand model retraining directly from the dashboard. Accuracy, precision, recall, and F1 are recorded for each model version.</div>
+            </div>
+
+        </div>
+    </div>
+</section>
+
+
+<!-- ══════════════════════════════════════════
+     PRICING
+══════════════════════════════════════════ -->
+<section class="section" id="pricing" style="background:rgba(22,29,25,0.25); border-top:0.5px solid var(--border); border-bottom:0.5px solid var(--border);">
+    <div class="container" style="text-align:center;">
+        <div class="section-eyebrow">Pricing</div>
+        <h2 class="section-h2">Simple, transparent plans</h2>
+        <p class="section-p" style="margin: 0 auto;">Start free. Upgrade when you need more power.</p>
+
+        <div class="pricing-grid">
+            <!-- FREE -->
+            <div class="glass price-card reveal">
+                <div class="price-tier">Free</div>
+                <div class="price-amount">
+                    <span class="price-currency">$</span>
+                    <span class="price-figure">0</span>
+                </div>
+                <div class="price-period">forever</div>
+                <div class="price-divider"></div>
+                <ul class="price-list">
+                    <li><span class="pcheck"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg></span> DNS proxy for 1 device</li>
+                    <li><span class="pcheck"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg></span> ML threat classification</li>
+                    <li><span class="pcheck"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg></span> 7-day query history</li>
+                    <li><span class="pcheck"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg></span> 1 API key</li>
+                    <li class="dim"><span class="pcheck"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg></span> Batch API (up to 10 domains)</li>
+                    <li class="dim"><span class="pcheck"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg></span> Priority support</li>
+                </ul>
+                <a href="/register" class="btn btn-ghost price-cta">Get Started Free</a>
+            </div>
+
+            <!-- PRO -->
+            <div class="glass price-card pro reveal" style="transition-delay:.1s;">
+                <div class="popular-badge">Most Popular</div>
+                <div class="price-tier pro">PRO</div>
+                <div class="price-amount">
+                    <span class="price-currency" style="color:var(--text-2);">$</span>
+                    <span class="price-figure" style="color:var(--text-1);">9</span>
+                </div>
+                <div class="price-period">per month</div>
+                <div class="price-divider green"></div>
+                <ul class="price-list">
+                    <li><span class="pcheck"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg></span> Unlimited devices</li>
+                    <li><span class="pcheck"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg></span> ML threat classification</li>
+                    <li><span class="pcheck"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg></span> 90-day query history</li>
+                    <li><span class="pcheck"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg></span> Unlimited API keys</li>
+                    <li><span class="pcheck"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg></span> Batch API (up to 50 domains)</li>
+                    <li><span class="pcheck"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg></span> Priority support</li>
+                </ul>
+                <a href="/register" class="btn btn-primary price-cta">Start PRO Trial</a>
+            </div>
+        </div>
+    </div>
+</section>
+
+
+<!-- ══════════════════════════════════════════
+     FOOTER
+══════════════════════════════════════════ -->
+<footer class="footer">
+    <div class="container">
+        <div class="footer-grid">
+            <div>
+                <div class="footer-brand-name">
+                    <div class="footer-logo-box">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="#042010" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                    </div>
+                    SecureDNS Guard
+                </div>
+                <p class="footer-tagline">AI-powered DNS security that protects your network at the query level — before threats can connect.</p>
+            </div>
+            <div>
+                <div class="footer-col-head">Product</div>
+                <ul class="footer-links">
+                    <li><a href="#features">Features</a></li>
+                    <li><a href="#pricing">Pricing</a></li>
+                    <li><a href="/api">Setup Guide</a></li>
+                    <li><a href="/help">Help</a></li>
+                </ul>
+            </div>
+            <div>
+                <div class="footer-col-head">Company</div>
+                <ul class="footer-links">
+                    <li><a href="#how-it-works">How it works</a></li>
+                    <li><a href="#">About</a></li>
+                </ul>
+            </div>
+            <div>
+                <div class="footer-col-head">Legal</div>
+                <ul class="footer-links">
+                    <li><a href="#">Privacy Policy</a></li>
+                    <li><a href="#">Terms of Service</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <span>© 2026 SecureDNS Guard &nbsp;·&nbsp; University of Jordan – KASIT Graduation Project</span>
+            <span>Built with care by Jawad Joudeh</span>
+        </div>
+    </div>
+</footer>
+
+
+<script>
+
+/* ── Scroll reveal ── */
+const revealObs = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+        if (e.isIntersecting) { e.target.classList.add('in'); revealObs.unobserve(e.target); }
+    });
+}, { threshold: 0.1 });
+document.querySelectorAll('.reveal').forEach(el => revealObs.observe(el));
+
+/* ── Count-up for stats ── */
+function animateCountUp(el) {
+    const end  = parseFloat(el.dataset.end);
+    const dec  = parseInt(el.dataset.dec  || '0', 10);
+    const suf  = el.dataset.suffix || '';
+    const dur  = 1600;
+    const t0   = performance.now();
+    (function step(now) {
+        const p = Math.min((now - t0) / dur, 1);
+        const ease = 1 - Math.pow(1 - p, 3);
+        el.textContent = (ease * end).toFixed(dec) + suf;
+        if (p < 1) requestAnimationFrame(step);
+    })(t0);
+}
+const countObs = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+        if (e.isIntersecting) { animateCountUp(e.target); countObs.unobserve(e.target); }
+    });
+}, { threshold: 0.6 });
+document.querySelectorAll('.countup').forEach(el => countObs.observe(el));
+
+/* ── Smooth-scroll anchor links ── */
+document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', ev => {
+        const id = a.getAttribute('href').slice(1);
+        const tgt = document.getElementById(id);
+        if (tgt) { ev.preventDefault(); tgt.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    });
+});
+
+/* ── Nav scroll tint ── */
+window.addEventListener('scroll', () => {
+    const nav = document.getElementById('topnav');
+    if (!nav) return;
+    nav.style.background = window.scrollY > 40
+        ? 'rgba(14, 21, 17, 0.96)'
+        : 'rgba(14, 21, 17, 0.82)';
+}, { passive: true });
+
+/* ── Mobile nav ── */
+function closeMobileNav() { document.getElementById('mobile-nav').classList.remove('open'); }
+document.getElementById('hamburger').addEventListener('click', () => {
+    document.getElementById('mobile-nav').classList.toggle('open');
+});
+
+/* ── Hero live DNS monitor ── */
+const MON_DATA = [
+    {% if recent_logs %}
+    {% for row in recent_logs %}
+    { domain: '{{ row.domain_name }}', safe: {{ "true" if row.action_taken == "Allowed" else "false" }}, ms: {{ row.lat_ms }}, conf: {{ row.conf_fmt }} },
+    {% endfor %}
+    {% else %}
+    { domain: 'api.github.com',          safe: true,  ms: 2,  conf: 99 },
+    { domain: 'dga-7f3a2b.xyz',          safe: false, ms: 1,  conf: 98 },
+    { domain: 'fonts.gstatic.com',       safe: true,  ms: 3,  conf: 100 },
+    { domain: 'tunnel-exfil.info',       safe: false, ms: 1,  conf: 97 },
+    { domain: 'cdn.jsdelivr.net',        safe: true,  ms: 2,  conf: 100 },
+    { domain: 'ccxs82k.win',             safe: false, ms: 1,  conf: 93 },
+    { domain: 'npmjs.com',              safe: true,  ms: 4,  conf: 99 },
+    { domain: 'a82kf9.tk',              safe: false, ms: 1,  conf: 91 },
+    {% endif %}
+];
+let monIdx = 0, monTotal = 0;
+function addMonRow() {
+    const rows = document.getElementById('mon-rows');
+    const cntEl = document.getElementById('mon-count');
+    if (!rows || !cntEl) return;
+    const e = MON_DATA[monIdx++ % MON_DATA.length];
+    monTotal++;
+    const row = document.createElement('div');
+    row.className = `monitor-row ${e.safe ? 'is-safe' : 'is-blocked'} entering`;
+    row.innerHTML =
+        `<span class="mverdict ${e.safe ? 'v-safe' : 'v-block'}">${e.safe ? '✓' : '✕'}</span>` +
+        `<span class="mdomain">${e.domain}</span>` +
+        `<span class="mbadge ${e.safe ? 'v-safe' : 'v-block'}">${e.safe ? 'SAFE' : 'BLOCKED'}</span>` +
+        `<span class="mtime">${e.ms}ms</span>`;
+    rows.insertBefore(row, rows.firstChild);
+    requestAnimationFrame(() => row.classList.remove('entering'));
+    while (rows.children.length > 7) rows.removeChild(rows.lastChild);
+    cntEl.textContent = monTotal.toLocaleString() + ' queries';
+}
+setTimeout(() => { addMonRow(); setInterval(addMonRow, 1600); }, 600);
+</script>
+</body>
+</html>

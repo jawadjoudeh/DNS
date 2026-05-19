@@ -1,0 +1,156 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile – SecureDNS Guard</title>
+    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+    <link rel="stylesheet" href="/assets/css/style.css">
+    <style>
+        .profile-avatar {
+            width: 64px; height: 64px; border-radius: 16px;
+            background: linear-gradient(135deg, var(--accent), var(--info));
+            color: white; display: flex; align-items: center; justify-content: center;
+            font-weight: 800; font-size: 1.75rem;
+        }
+        .profile-header { display: flex; align-items: center; gap: 1.25rem; margin-bottom: 1.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--border-color); }
+        .key-card {
+            background: var(--bg-base); padding: 1rem; border-radius: var(--border-radius-sm);
+            margin-bottom: 0.75rem; border: 1px solid var(--border-color);
+            transition: border-color 0.2s;
+        }
+        .key-card:hover { border-color: var(--accent); }
+        .key-input {
+            font-family: 'Courier New', monospace; font-size: 0.8rem;
+            background: var(--bg-card); margin: 0; padding: 0.4rem 0.6rem;
+            border: 1px solid var(--border-color); letter-spacing: 0.02em;
+        }
+        .info-row { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 0; border-bottom: 1px solid var(--border-color); }
+        .info-row:last-child { border-bottom: none; }
+        .info-label { color: var(--text-secondary); font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+        .info-value { font-weight: 600; }
+    </style>
+</head>
+<body>
+    <div class="app-layout">
+        <aside class="sidebar" id="sidebar"></aside>
+        <div class="sidebar-overlay"></div>
+        <main class="main-wrapper">
+            <header class="topbar" id="topbar"></header>
+            <div class="content">
+                <div class="page-header"><h1 class="page-title">Profile & API Keys</h1></div>
+                <div class="grid-2 mb-4">
+                    <div class="card">
+                        <div class="card-header"><h2 class="card-title">Account</h2></div>
+                        <div id="profile-info"><div class="skeleton" style="height:120px;"></div></div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h2 class="card-title">API Keys</h2>
+                            <button class="btn" onclick="generateKey()" style="padding:0.35rem 0.85rem; font-size:0.85rem;">+ New Key</button>
+                        </div>
+                        <p class="text-muted mb-3" style="font-size:0.85rem;">Use these keys to authenticate API requests. Keep them secret.</p>
+                        <div id="keys-list"><div class="skeleton" style="height:60px;"></div></div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+    <script src="/assets/js/main.js"></script>
+    <script>
+        function maskKey(k) { return k.slice(0, 10) + '••••••••••••••••••••' + k.slice(-4); }
+
+        document.addEventListener("DOMContentLoaded", async () => {
+            const me = await checkAuth();
+            if (!me) return;
+            document.getElementById('sidebar').innerHTML = renderSidebar(me.is_admin);
+            document.getElementById('topbar').innerHTML = renderTopbar(me);
+            setActiveNavLink(); initMobileMenu(); document.getElementById('profile-info').innerHTML = `
+                <div class="profile-header">
+                    <div class="profile-avatar">${me.username.charAt(0).toUpperCase()}</div>
+                    <div>
+                        <div style="font-size:1.15rem; font-weight:700;">${me.username}</div>
+                        <div class="text-muted" style="font-size:0.875rem;">${me.email}</div>
+                    </div>
+                </div>
+                <div class="info-row"><span class="info-label">Plan</span><span class="info-value"><span class="badge blue">${(me.plan||'free').toUpperCase()}</span></span></div>
+                <div class="info-row"><span class="info-label">Role</span><span class="info-value">${me.is_admin ? '<span class="badge red">Admin</span>' : '<span class="badge gray">User</span>'}</span></div>
+                <div class="info-row"><span class="info-label">User ID</span><span class="info-value text-muted">#${me.user_id}</span></div>
+            `;
+            fetchKeys();
+        });
+
+        async function fetchKeys() {
+            const res = await fetch('/api/v1/keys');
+            if (!res.ok) return;
+            const keys = await res.json();
+            const list = document.getElementById('keys-list');
+            list.innerHTML = '';
+            if (keys.length === 0) { list.innerHTML = '<p class="text-muted" style="text-align:center; padding:2rem;">No keys yet. Click "+ New Key" to create one.</p>'; return; }
+            keys.forEach(k => {
+                const d = document.createElement('div');
+                d.className = 'key-card';
+                const masked = maskKey(k.key_value);
+
+                /* Build DOM safely — no innerHTML with user-controlled values */
+                const header = document.createElement('div');
+                header.className = 'd-flex justify-content-between align-items-center mb-2';
+                const nameEl = document.createElement('strong');
+                nameEl.textContent = k.name;
+                const usageEl = document.createElement('span');
+                usageEl.className = 'badge gray';
+                usageEl.textContent = `Uses today: ${k.uses_today}`;
+                header.append(nameEl, usageEl);
+
+                const row = document.createElement('div');
+                row.className = 'd-flex gap-2';
+
+                const inp = document.createElement('input');
+                inp.type = 'text';
+                inp.value = masked;
+                inp.readOnly = true;
+                inp.className = 'key-input';
+                inp.id = `ki-${k.key_id}`;
+                inp.style.cssText = 'flex:1; font-size:0.78rem;';
+
+                const copyBtn = document.createElement('button');
+                copyBtn.className = 'btn outline';
+                copyBtn.style.cssText = 'padding:0.3rem 0.7rem; font-size:0.8rem; white-space:nowrap;';
+                copyBtn.textContent = 'Copy';
+                copyBtn.addEventListener('click', () => copyKey(k.key_value, `ki-${k.key_id}`));
+
+                const delBtn = document.createElement('button');
+                delBtn.className = 'btn outline danger';
+                delBtn.style.cssText = 'padding:0.3rem 0.7rem; font-size:0.8rem; white-space:nowrap;';
+                delBtn.textContent = 'Delete';
+                delBtn.addEventListener('click', () => deleteKey(k.key_id, k.name));
+
+                row.append(inp, copyBtn, delBtn);
+                d.append(header, row);
+                list.appendChild(d);
+            });
+        }
+
+        function copyKey(value, inputId) {
+            navigator.clipboard.writeText(value).then(() => {
+                const el = document.getElementById(inputId);
+                if (el) { el.value = value; setTimeout(() => { el.value = maskKey(value); }, 3000); }
+                showToast('Copied to clipboard', 'success');
+            }).catch(() => showToast('Failed to copy', 'error'));
+        }
+
+        async function deleteKey(keyId, keyName) {
+            if (!await showConfirm(`Delete key "${keyName}"? This cannot be undone.`)) return;
+            const res = await fetch(`/api/v1/keys/${keyId}`, {method: 'DELETE'});
+            if (res.ok) { showToast('Key deleted', 'success'); fetchKeys(); }
+            else showToast('Failed to delete key', 'error');
+        }
+
+        async function generateKey() {
+            await fetch('/api/v1/keys', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name:'New Key'})});
+            showToast('API key created', 'success'); fetchKeys();
+        }
+    </script>
+</body>
+</html>

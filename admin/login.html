@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login – SecureDNS Guard</title>
+    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+    <link rel="stylesheet" href="/assets/css/style.css">
+</head>
+<body>
+    <div class="auth-wrapper">
+        <div class="card auth-card">
+            <div class="auth-header">
+                <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" width="48" height="48" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                <h2 style="margin-top:0.75rem;">Admin Console</h2>
+                <p class="text-muted" style="margin-top:0.25rem; font-size:0.875rem;">Sign in with your admin account</p>
+            </div>
+
+            <div id="error-msg" class="text-danger mb-3" style="font-size:0.875rem; text-align:center; display:none;"></div>
+
+            <div>
+                <label style="font-weight:600; font-size:0.8rem; display:block; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.35rem;">Username or Email</label>
+                <input type="text" id="identity" placeholder="admin" autocomplete="username">
+            </div>
+            <div>
+                <label style="font-weight:600; font-size:0.8rem; display:block; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.35rem;">Password</label>
+                <input type="password" id="password" placeholder="Password" autocomplete="current-password">
+            </div>
+
+            <button class="btn" id="login-btn" style="width:100%; padding:0.65rem;" onclick="doLogin()">Sign in as Admin</button>
+
+            <div style="text-align:center; margin-top:1.5rem; font-size:0.85rem;">
+                <a href="/login" style="color:var(--text-secondary);">← Back to user login</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+        async function doLogin() {
+            const btn    = document.getElementById('login-btn');
+            const errEl  = document.getElementById('error-msg');
+            const identity = document.getElementById('identity').value.trim();
+            const password = document.getElementById('password').value;
+
+            if (!identity || !password) { showErr('Please enter your username and password.'); return; }
+
+            btn.textContent = 'Signing in…'; btn.disabled = true; errEl.style.display = 'none';
+
+            try {
+                const res  = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({identity, password})
+                });
+                const data = await res.json();
+                if (data.success && data.is_admin) {
+                    window.location.href = '/admin/dashboard';
+                } else if (data.success && !data.is_admin) {
+                    showErr('This account does not have admin privileges.');
+                } else {
+                    showErr(data.error || 'Invalid username or password.');
+                }
+            } catch {
+                showErr('Network error. Please try again.');
+            }
+
+            btn.textContent = 'Sign in as Admin'; btn.disabled = false;
+        }
+
+        function showErr(msg) {
+            const el = document.getElementById('error-msg');
+            el.textContent = msg; el.style.display = 'block';
+        }
+    </script>
+</body>
+</html>

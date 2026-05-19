@@ -1,0 +1,226 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Dashboard – SecureDNS Guard</title>
+    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+    <link rel="stylesheet" href="/assets/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="app-layout">
+        <aside class="sidebar" id="sidebar"></aside>
+        <div class="sidebar-overlay"></div>
+
+        <main class="main-wrapper">
+            <header class="topbar" id="topbar"></header>
+
+            <div class="content">
+                <!-- Setup banner: shown once after registration, key from sessionStorage -->
+                <div id="setup-banner" style="display:none; background:linear-gradient(135deg,rgba(0,229,160,0.12),rgba(59,130,246,0.08)); border:1px solid var(--accent); border-radius:var(--border-radius); padding:1.25rem 1.5rem; margin-bottom:1.5rem;">
+                    <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; flex-wrap:wrap;">
+                        <div style="flex:1; min-width:0;">
+                            <div style="font-weight:700; font-size:1rem; color:var(--accent); margin-bottom:0.35rem;">🎉 Account created! Here's your API key</div>
+                            <div style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:0.85rem;">Copy this key and paste it into the extension popup → Settings → API Key. Keep it secret.</div>
+                            <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+                                <input id="setup-key-input" type="text" readonly
+                                    style="font-family:'Courier New',monospace; font-size:0.78rem; flex:1; min-width:0; background:var(--bg-base); border:1px solid var(--border-color); padding:0.45rem 0.75rem; border-radius:var(--border-radius-sm); color:var(--text-primary);">
+                                <button class="btn" onclick="copySetupKey()" id="setup-copy-btn"
+                                    style="white-space:nowrap; padding:0.45rem 1rem; font-size:0.85rem;">Copy Key</button>
+                                <a href="/profile" class="btn outline"
+                                    style="white-space:nowrap; padding:0.45rem 1rem; font-size:0.85rem;">Profile & Keys →</a>
+                            </div>
+                        </div>
+                        <button onclick="dismissSetupBanner()" style="background:none; border:none; color:var(--text-secondary); cursor:pointer; font-size:1.2rem; line-height:1; padding:0; flex-shrink:0;" title="Dismiss">✕</button>
+                    </div>
+                </div>
+
+                <div class="page-header"><h1 class="page-title">My Dashboard</h1></div>
+
+                <div class="grid-4 mb-4">
+                    <div class="card stat-card stat-blue">
+                        <div class="stat-title">My Queries</div>
+                        <div class="stat-value blue skeleton" id="kpi-total">0</div>
+                        <div class="stat-subtitle" id="kpi-total-sub"></div>
+                    </div>
+                    <div class="card stat-card stat-red">
+                        <div class="stat-title">Blocked</div>
+                        <div class="stat-value red skeleton" id="kpi-blocked">0</div>
+                        <div class="stat-subtitle" id="kpi-blocked-sub"></div>
+                    </div>
+                    <div class="card stat-card stat-green">
+                        <div class="stat-title">Safe</div>
+                        <div class="stat-value green skeleton" id="kpi-safe">0</div>
+                        <div class="stat-subtitle" id="kpi-safe-sub"></div>
+                    </div>
+                    <div class="card stat-card stat-yellow">
+                        <div class="stat-title">Model Accuracy</div>
+                        <div class="stat-value yellow skeleton" id="kpi-acc">0%</div>
+                        <div class="stat-subtitle">IsolationForest + RF</div>
+                    </div>
+                </div>
+
+                <div class="grid-2 mb-4">
+                    <div class="card">
+                        <div class="card-header"><h2 class="card-title">My Traffic (24h)</h2></div>
+                        <div style="height:300px; position:relative;">
+                            <div class="empty-state" id="chart-empty" style="display:none;">
+                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>
+                                <p>No traffic data yet.<br>Start using the proxy to see your stats.</p>
+                            </div>
+                            <canvas id="hourlyChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header"><h2 class="card-title">Quick Domain Test</h2></div>
+                        <p class="text-muted mb-3" style="font-size:0.875rem;">Check any domain against the ML model manually.</p>
+                        <input type="text" id="test-domain" placeholder="example.com" style="font-family:'Courier New',monospace;">
+                        <button class="btn" id="test-btn" onclick="testDomain()" style="width:100%;">Test Domain</button>
+                        <div id="test-result" style="margin-top:1rem; padding:1.25rem; border-radius:var(--border-radius-sm); background:var(--bg-base); border:1px solid var(--border-color); display:none;"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/assets/js/main.js"></script>
+    <script>
+        /* ── Setup banner (shown once after registration) ── */
+        function initSetupBanner() {
+            const key = sessionStorage.getItem('new_api_key');
+            if (!key) return;
+            const banner = document.getElementById('setup-banner');
+            const input  = document.getElementById('setup-key-input');
+            if (!banner || !input) return;
+            input.value = key;
+            banner.style.display = 'block';
+        }
+
+        function copySetupKey() {
+            const key = sessionStorage.getItem('new_api_key');
+            if (!key) return;
+            navigator.clipboard.writeText(key).then(() => {
+                const btn = document.getElementById('setup-copy-btn');
+                if (btn) { btn.textContent = '✓ Copied!'; setTimeout(() => { btn.textContent = 'Copy Key'; }, 2000); }
+                showToast('API key copied — paste it in the extension popup → Settings → API Key', 'success', 5000);
+            }).catch(() => {
+                /* Fallback: select the text so user can copy manually */
+                const inp = document.getElementById('setup-key-input');
+                if (inp) { inp.select(); inp.setSelectionRange(0, 99999); }
+                showToast('Press Ctrl+C to copy the selected key', 'info', 4000);
+            });
+        }
+
+        function dismissSetupBanner() {
+            sessionStorage.removeItem('new_api_key');
+            const banner = document.getElementById('setup-banner');
+            if (banner) banner.style.display = 'none';
+        }
+
+        document.addEventListener("DOMContentLoaded", async () => {
+            const me = await checkAuth();
+            if (me) {
+                document.getElementById('sidebar').innerHTML = renderSidebar(me.is_admin);
+                document.getElementById('topbar').innerHTML = renderTopbar(me);
+                setActiveNavLink(); initMobileMenu();
+            }
+            initSetupBanner();
+            loadStats();
+            fetchHourly();
+        });
+
+        async function loadStats() {
+            try {
+                const res = await fetch('/api/stats/overview');
+                if (!res.ok) return;
+                const d = await res.json();
+                const set = (id, val) => { const el = document.getElementById(id); if(el) { el.classList.remove('skeleton'); el.textContent = val; } };
+                set('kpi-total',   d.total_queries.toLocaleString());
+                set('kpi-blocked', d.blocked_queries.toLocaleString());
+                set('kpi-safe',    d.safe_queries.toLocaleString());
+                set('kpi-acc',     (d.model_accuracy * 100).toFixed(1) + '%');
+                const total = d.total_queries || 1;
+                const sub = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+                sub('kpi-total-sub',   'all time');
+                sub('kpi-blocked-sub', ((d.blocked_queries/total)*100).toFixed(1)+'% of total');
+                sub('kpi-safe-sub',    ((d.safe_queries/total)*100).toFixed(1)+'% of total');
+            } catch {}
+        }
+        setInterval(loadStats, 15000);
+
+        async function fetchHourly() {
+            try {
+                const res = await fetch('/api/stats/hourly');
+                if (!res.ok) return;
+                const data = await res.json();
+                const hasData = data.some(d => d.safe > 0 || d.blocked > 0);
+                if (!hasData) {
+                    document.getElementById('chart-empty').style.display = 'flex';
+                    document.getElementById('hourlyChart').style.display = 'none';
+                    return;
+                }
+                document.getElementById('chart-empty').style.display = 'none';
+                document.getElementById('hourlyChart').style.display = 'block';
+                const labels = data.map(d => new Date(d.hour).getHours()+':00');
+                const safe = data.map(d => d.safe);
+                const blocked = data.map(d => d.blocked);
+                const style     = getComputedStyle(document.documentElement);
+                const gridColor = style.getPropertyValue('--border-color').trim();
+                const textColor = style.getPropertyValue('--text-secondary').trim();
+                const dangerColor = style.getPropertyValue('--danger').trim();
+                const safeColor   = style.getPropertyValue('--success').trim();
+                new Chart(document.getElementById('hourlyChart').getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels,
+                        datasets: [
+                            { label: 'Blocked', data: blocked, backgroundColor: dangerColor, borderRadius: 4 },
+                            { label: 'Safe', data: safe, backgroundColor: safeColor, borderRadius: 4 }
+                        ]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        scales: {
+                            x: { stacked: true, grid: { color: gridColor }, ticks: { color: textColor } },
+                            y: { stacked: true, grid: { color: gridColor }, ticks: { color: textColor } }
+                        },
+                        plugins: { legend: { labels: { color: textColor, usePointStyle: true, boxWidth: 8 } } }
+                    }
+                });
+            } catch {}
+        }
+
+        async function testDomain() {
+            const d = document.getElementById('test-domain').value;
+            if (!d) return;
+            const resEl = document.getElementById('test-result');
+            resEl.style.display = 'block';
+            resEl.innerHTML = '<div class="skeleton" style="height:24px; width:100%;"></div>';
+            try {
+                const res = await fetch('/api/classify', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({domain:d})});
+                if (res.ok) {
+                    const data = await res.json();
+                    const blocked = data.blocked;
+                    resEl.innerHTML = `
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong style="color:${blocked?'var(--danger)':'var(--success)'}; font-size:1.1rem;">${data.prediction}</strong>
+                                ${data.attack_type ? `<div class="text-muted mt-2" style="font-size:0.8rem;">Type: ${data.attack_type}</div>` : ''}
+                            </div>
+                            <span class="badge ${blocked?'red':'green'}" style="font-size:0.85rem; padding:0.3rem 0.75rem;">${blocked?'Blocked':'Safe'}</span>
+                        </div>
+                        <div style="margin-top:0.75rem; display:flex; align-items:center; gap:0.75rem;">
+                            <div class="conf-bar-wrapper" style="flex:1;">
+                                <div class="conf-bar-inner" style="width:${(data.confidence*100).toFixed(0)}%; background:${blocked?'var(--danger)':'var(--success)'};"></div>
+                            </div>
+                            <span style="font-size:0.85rem; font-weight:600; color:${blocked?'var(--danger)':'var(--success)'};">${(data.confidence*100).toFixed(1)}%</span>
+                        </div>`;
+                }
+            } catch(e) { resEl.innerHTML = '<span class="text-danger">Error testing domain.</span>'; }
+        }
+
+        document.getElementById('test-domain').addEventListener('keypress', (e) => { if (e.key === 'Enter') testDomain(); });
+    </script>
+</body>
+</html>

@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Logs – SecureDNS Guard</title>
+    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+    <link rel="stylesheet" href="/assets/css/style.css">
+    <style>
+        .admin-sidebar { width: 230px; background: var(--bg-sidebar); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; flex-shrink: 0; }
+        .admin-sidebar-header { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 0.65rem; }
+        .admin-sidebar-title { font-weight: 800; font-size: 1rem; letter-spacing: -0.02em; }
+        .admin-sidebar-badge { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; background: var(--danger); color: #fff; padding: 0.1rem 0.4rem; border-radius: 4px; letter-spacing: 0.06em; }
+        .admin-nav { padding: 1rem 0; flex: 1; display: flex; flex-direction: column; }
+        .admin-nav-item { display: flex; align-items: center; gap: 0.65rem; padding: 0.65rem 1.5rem; color: var(--text-secondary); font-weight: 500; font-size: 0.875rem; border-left: 3px solid transparent; text-decoration: none; transition: all 0.15s; }
+        .admin-nav-item:hover { background: var(--bg-hover); color: var(--text-primary); }
+        .admin-nav-item.active { color: var(--accent); background: var(--accent-glow); border-left-color: var(--accent); font-weight: 600; }
+        .admin-nav-item i { font-style: normal; width: 20px; text-align: center; display: flex; align-items: center; justify-content: center; }
+        .admin-nav-divider { height: 1px; background: var(--border-color); margin: 0.75rem 1rem; }
+        .admin-nav-spacer { flex: 1; }
+        .page-btns { display: flex; gap: 0.25rem; }
+        .page-btns button { background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-primary); width: 32px; height: 32px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .page-btns button:hover:not(:disabled) { border-color: var(--info); color: var(--info); }
+        .page-btns button.active { background: var(--info); border-color: var(--info); color: white; }
+        .page-btns button:disabled { opacity: 0.5; cursor: not-allowed; }
+        @media (max-width: 860px) { .admin-sidebar { display: none; } }
+    </style>
+</head>
+<body>
+    <div class="app-layout">
+        <aside class="admin-sidebar">
+            <div class="admin-sidebar-header">
+                <div style="width:30px;height:30px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="white" width="17" height="17" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                </div>
+                <div>
+                    <div class="admin-sidebar-title">SecureDNS</div>
+                    <div class="admin-sidebar-badge">Admin</div>
+                </div>
+            </div>
+            <nav class="admin-nav">
+                <a href="/admin/dashboard" class="admin-nav-item"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></i> Dashboard</a>
+                <a href="/admin/logs" class="admin-nav-item active"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></i> All Logs</a>
+                <a href="/admin/users" class="admin-nav-item"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></i> Users</a>
+                <a href="/admin/model" class="admin-nav-item"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg></i> AI Model</a>
+                <div class="admin-nav-divider"></div>
+                <a href="/admin/settings" class="admin-nav-item"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></i> Settings</a>
+                <div class="admin-nav-spacer"></div>
+                <a href="/admin/logout" class="admin-nav-item" style="color:var(--danger);"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></i> Logout</a>
+            </nav>
+        </aside>
+
+        <main class="main-wrapper">
+            <header class="topbar">
+                <span style="font-weight:600;font-size:0.95rem;">All Query Logs</span>
+                <div style="display:flex;align-items:center;gap:0.75rem;">
+                    <span class="badge red" style="font-size:0.65rem;">ADMIN</span>
+                </div>
+            </header>
+
+            <div class="content">
+                <div class="page-header">
+                    <h1 class="page-title">Query Log (All Users)</h1>
+                    <button class="btn outline" onclick="exportCSV()">Export CSV</button>
+                </div>
+
+                <div class="filter-card mb-4">
+                    <input type="text" id="search" placeholder="Search domain..." style="flex:2; min-width:200px;">
+                    <select id="verdict"><option value="all">All</option><option value="Safe">Safe</option><option value="Malicious">Blocked</option></select>
+                    <select id="attack_type"><option value="all">All Types</option><option value="dga">DGA</option><option value="tunneling">Tunneling</option></select>
+                    <button class="btn outline" onclick="clearFilters()" style="margin-bottom:0;">Reset</button>
+                </div>
+
+                <div class="card" style="padding:0; overflow:hidden;">
+                    <div class="table-responsive" style="margin:0;">
+                        <table>
+                            <thead><tr><th>Time</th><th>User</th><th>Client</th><th>Domain</th><th>Status</th><th>Type</th></tr></thead>
+                            <tbody id="logs-body"><tr><td colspan="6" style="text-align:center; padding:3rem;">Loading…</td></tr></tbody>
+                        </table>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding:1rem; border-top:1px solid var(--border-color);">
+                        <span class="text-muted" id="page-info" style="font-size:0.85rem;"></span>
+                        <div class="page-btns" id="page-btns"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        async function loadLogs() {
+            const tb = document.getElementById('logs-body');
+            tb.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:3rem;">Loading…</td></tr>';
+            try {
+                const res = await fetch('/admin/api/all-logs');
+                if (!res.ok) return;
+                const logs = await res.json();
+                tb.innerHTML = '';
+                if (logs.length === 0) { tb.innerHTML = '<tr><td colspan="6" class="text-muted" style="text-align:center; padding:3rem;">No logs.</td></tr>'; return; }
+
+                const search = document.getElementById('search').value.toLowerCase();
+                const verdict = document.getElementById('verdict').value;
+                const atype = document.getElementById('attack_type').value;
+
+                const filtered = logs.filter(l => {
+                    if (search && !l.domain_name.toLowerCase().includes(search)) return false;
+                    if (verdict === 'Safe' && l.action_taken === 'Blocked') return false;
+                    if (verdict === 'Malicious' && l.action_taken !== 'Blocked') return false;
+                    if (atype !== 'all' && l.attack_type !== atype) return false;
+                    return true;
+                });
+
+                tb.innerHTML = filtered.map(l => {
+                    const blocked = l.action_taken === 'Blocked';
+                    return `<tr>
+                        <td class="text-muted" style="white-space:nowrap;">${new Date(l.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</td>
+                        <td>${l.username || l.user_id || '—'}</td>
+                        <td>${l.source_ip}</td>
+                        <td style="font-family:monospace; color:${blocked?'var(--danger)':'var(--text-primary)'};">${l.domain_name.length>40?l.domain_name.substring(0,37)+'...':l.domain_name}</td>
+                        <td><span class="badge ${blocked?'red':'green'}">${blocked?'Blocked':'Safe'}</span></td>
+                        <td>${l.attack_type||'—'}</td>
+                    </tr>`;
+                }).join('');
+                document.getElementById('page-info').textContent = `${filtered.length} entries`;
+            } catch { tb.innerHTML = '<tr><td colspan="6" class="text-danger" style="text-align:center; padding:3rem;">Failed to load logs.</td></tr>'; }
+        }
+
+        document.getElementById('search').addEventListener('input', loadLogs);
+        document.getElementById('verdict').addEventListener('change', loadLogs);
+        document.getElementById('attack_type').addEventListener('change', loadLogs);
+        function clearFilters() { document.getElementById('search').value=''; document.getElementById('verdict').value='all'; document.getElementById('attack_type').value='all'; loadLogs(); }
+        function exportCSV() { window.location.href = '/api/logs/export'; }
+
+        loadLogs();
+    </script>
+</body>
+</html>

@@ -1,0 +1,430 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Query Log - SecureDNS Guard</title>
+        <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+    <link rel="stylesheet" href="/assets/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .filter-section { margin-bottom: 1.5rem; }
+        .row-details { display: none; background: rgba(255,255,255,0.02); }
+        .row-details.open { display: table-row; }
+        
+        .pagination { display: flex; justify-content: space-between; align-items: center; padding: 1rem; border-top: 1px solid var(--border-color); }
+        .page-btns { display: flex; gap: 0.25rem; }
+        .page-btns button {
+            background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-primary);
+            width: 32px; height: 32px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+        }
+        .page-btns button:hover:not(:disabled) { border-color: var(--info); color: var(--info); }
+        .page-btns button.active { background: var(--info); border-color: var(--info); color: white; }
+        .page-btns button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .fb-btn { border: none; background: transparent; cursor: pointer; padding: 0.15rem 0.35rem; border-radius: 4px; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.02em; transition: background 0.15s; }
+        .fb-safe { color: var(--success); border: 1px solid var(--success); }
+        .fb-safe:hover { background: rgba(93,185,118,0.15); }
+        .fb-mal  { color: var(--danger);  border: 1px solid var(--danger);  }
+        .fb-mal:hover  { background: rgba(226,88,88,0.12); }
+        .fb-done { opacity: 0.5; cursor: default; pointer-events: none; }
+        .feedback-banner { display: flex; align-items: center; gap: 1rem; padding: 0.65rem 1rem; background: var(--accent-dim); border: 1px solid var(--accent); border-radius: 6px; font-size: 0.82rem; margin-bottom: 1rem; }
+        .feedback-banner strong { color: var(--accent); }
+    </style>
+</head>
+<body>
+    <div class="app-layout">
+        <aside class="sidebar" id="sidebar"></aside>
+        <div class="sidebar-overlay"></div>
+        
+        <main class="main-wrapper">
+            <header class="topbar" id="topbar"></header>
+            
+            <div class="content">
+                <div class="page-header">
+                    <h1 class="page-title">Query Log</h1>
+                    <button class="btn outline" onclick="exportCSV()">Export CSV</button>
+                </div>
+
+                <!-- Feedback banner -->
+                <div class="feedback-banner" id="feedback-banner" style="display:none;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="16" height="16" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                    <span>AI is learning from your feedback. <strong id="fb-count">0</strong> corrections recorded — model auto-retrains every <strong>50</strong> new corrections.</span>
+                    <span id="fb-next" style="color:var(--text-secondary);margin-left:auto;"></span>
+                </div>
+
+                <div class="filter-section">
+                    <div class="filter-card">
+                        <input type="text" id="search" placeholder="Search by domain..." style="flex: 2; min-width: 200px;">
+                        <select id="verdict">
+                            <option value="all">All statuses</option>
+                            <option value="Safe">Processed</option>
+                            <option value="Malicious">Blocked</option>
+                        </select>
+                        <select id="attack_type">
+                            <option value="all">All rule types</option>
+                            <option value="dga">DGA</option>
+                            <option value="tunneling">DNS Tunneling</option>
+                        </select>
+                        <div class="d-flex align-items-center gap-2" style="flex: 1; min-width: 150px;">
+                            <label class="text-muted" style="white-space:nowrap; font-size:0.875rem;">Min Conf:</label>
+                            <input type="range" id="min_conf" min="0" max="100" value="0" style="margin:0; flex:1;">
+                            <span id="conf_val" style="width: 35px; font-size: 0.875rem;">0%</span>
+                        </div>
+                        <input type="date" id="date_from" title="From date" style="min-width:130px;">
+                        <input type="date" id="date_to" title="To date" style="min-width:130px;">
+                        <button class="btn outline" onclick="clearFilters()" title="Reset filters" style="margin-bottom:0;">Reset</button>
+                    </div>
+                </div>
+
+                <div class="card" style="padding: 0; overflow: hidden;">
+                    <div class="table-responsive" style="margin: 0;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="background: var(--bg-card);">Time</th>
+                                    <th style="background: var(--bg-card);">Client</th>
+                                    <th style="background: var(--bg-card);">Request</th>
+                                    <th style="background: var(--bg-card);">Status</th>
+                                    <th style="background: var(--bg-card);" class="hide-mobile">Rule / Type</th>
+                                    <th style="background: var(--bg-card);">Action</th>
+                            <th style="background: var(--bg-card);" title="Correct the AI — helps retrain the model">Feedback</th>
+                                </tr>
+                            </thead>
+                            <tbody id="logs-body">
+                                <tr><td colspan="7" style="text-align:center; padding: 3rem;">Loading queries...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="pagination">
+                        <div class="text-muted" style="font-size: 0.875rem;" id="page-info">Page 1</div>
+                        <div class="page-btns" id="page-btns"></div>
+                        <select id="limit" style="margin:0; width:auto; padding: 0.3rem;" onchange="currentPage=1; loadLogs();">
+                            <option value="25">25</option>
+                            <option value="50" selected>50</option>
+                            <option value="100">100</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Explanation Modal -->
+    <div class="modal-overlay" id="why-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Query Details</h3>
+                <button class="modal-close" onclick="closeModal()">✕</button>
+            </div>
+            
+            <div class="mb-3" style="font-family: monospace; font-size: 1.1rem; word-break: break-all; background: var(--bg-base); padding: 1rem; border-radius: 4px;" id="modal-domain"></div>
+            <div id="modal-badge" class="mb-3"></div>
+            
+            <div style="height: 250px; margin-bottom: 1.5rem;">
+                <canvas id="whyChart"></canvas>
+            </div>
+            
+            <div class="table-responsive" style="margin:0; border: none;">
+                <table>
+                    <tbody id="modal-features"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="/assets/js/main.js"></script>
+    <script>
+        let currentPage = 1;
+        let totalPages = 1;
+        let chartInstance = null;
+        let searchTimeout = null;
+
+        document.addEventListener("DOMContentLoaded", async () => {
+            const me = await checkAuth();
+            if (me) {
+                document.getElementById('sidebar').innerHTML = renderSidebar(me.is_admin);
+                document.getElementById('topbar').innerHTML = renderTopbar(me);
+                setActiveNavLink();
+                initMobileMenu();
+                }
+            loadLogs();
+        });
+
+        document.getElementById('min_conf').addEventListener('input', (e) => {
+            document.getElementById('conf_val').textContent = e.target.value + '%';
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => { currentPage = 1; loadLogs(); }, 300);
+        });
+
+        const filterInputs = ['search', 'verdict', 'attack_type', 'date_from', 'date_to'];
+        filterInputs.forEach(id => {
+            document.getElementById(id).addEventListener('input', () => {
+                if (id === 'search') {
+                    clearTimeout(searchTimeout);
+                    searchTimeout = setTimeout(() => { currentPage = 1; loadLogs(); }, 300);
+                } else {
+                    currentPage = 1; loadLogs();
+                }
+            });
+        });
+
+        function clearFilters() {
+            document.getElementById('search').value = '';
+            document.getElementById('verdict').value = 'all';
+            document.getElementById('attack_type').value = 'all';
+            document.getElementById('min_conf').value = 0;
+            document.getElementById('conf_val').textContent = '0%';
+            document.getElementById('date_from').value = '';
+            document.getElementById('date_to').value = '';
+            currentPage = 1;
+            loadLogs();
+        }
+
+        function getFilterParams() {
+            const params = new URLSearchParams({
+                page: currentPage,
+                limit: document.getElementById('limit').value,
+                verdict: document.getElementById('verdict').value,
+                attack_type: document.getElementById('attack_type').value,
+                min_confidence: document.getElementById('min_conf').value,
+                search: document.getElementById('search').value
+            });
+            const df = document.getElementById('date_from').value;
+            const dt = document.getElementById('date_to').value;
+            if (df) params.append('date_from', df);
+            if (dt) params.append('date_to', dt);
+            return params;
+        }
+
+        async function loadLogs() {
+            const tb = document.getElementById('logs-body');
+            tb.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 3rem;">Loading queries...</td></tr>';
+            
+            const params = getFilterParams();
+            const res = await fetch(`/api/logs?${params.toString()}`);
+            if (!res.ok) return;
+            
+            const data = await res.json();
+            tb.innerHTML = '';
+
+            if (data.logs.length === 0) {
+                tb.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 3rem;" class="text-muted">No queries match your filters.</td></tr>';
+            }
+
+            data.logs.forEach(l => {
+                const isMalicious = l.action_taken === 'Blocked';
+                let badge = isMalicious ? `<span class="badge red">Blocked by ML filters</span>` : `<span class="badge green">Processed</span>`;
+                
+                const conf = (l.confidence * 100).toFixed(0);
+                const confColor = isMalicious ? 'var(--danger)' : 'var(--success)';
+
+                const tr = document.createElement('tr');
+                tr.style.cursor = 'pointer';
+                
+                const domainDisp = l.domain_name.length > 50 ? l.domain_name.substring(0, 47) + '...' : l.domain_name;
+
+                const hasFeedback = !!l.user_label;
+                const fbSafe = hasFeedback && l.user_label === 'safe';
+                const fbMal  = hasFeedback && l.user_label === 'malicious';
+
+                tr.innerHTML = `
+                    <td class="text-muted" style="white-space:nowrap;">${new Date(l.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'})}</td>
+                    <td>${l.source_ip}</td>
+                    <td style="font-family: monospace; color: ${isMalicious ? 'var(--danger)' : 'var(--text-primary)'};" title="${l.domain_name}">${domainDisp}</td>
+                    <td>${badge} <span style="font-size: 0.75rem; color: ${confColor}; margin-left: 0.5rem;">${conf}%</span></td>
+                    <td class="hide-mobile">${l.attack_type && l.attack_type !== 'None' ? l.attack_type : 'Behavioral'}</td>
+                    <td>
+                        <button class="btn outline" style="padding: 0.2rem 0.5rem; font-size: 0.75rem;" onclick="openWhy(event, ${l.log_id}, '${l.domain_name}', ${conf}, ${isMalicious})">Explain</button>
+                    </td>
+                    <td style="white-space:nowrap;">
+                        <button id="fb-safe-${l.log_id}" class="fb-btn fb-safe ${fbSafe ? 'fb-done' : ''}" onclick="sendFeedback(event,${l.log_id},'safe')" title="Mark as Safe — AI was wrong">
+                            ✓ Safe
+                        </button>
+                        <button id="fb-mal-${l.log_id}"  class="fb-btn fb-mal  ${fbMal  ? 'fb-done' : ''}" onclick="sendFeedback(event,${l.log_id},'malicious')" title="Confirm Threat — AI was right / this is malicious">
+                            ✕ Threat
+                        </button>
+                    </td>
+                `;
+                
+                tr.addEventListener('click', (e) => {
+                    if (e.target.tagName !== 'BUTTON') {
+                        const details = document.getElementById(`details-${l.log_id}`);
+                        if(details) details.classList.toggle('open');
+                    }
+                });
+
+                const expandTr = document.createElement('tr');
+                expandTr.id = `details-${l.log_id}`;
+                expandTr.className = 'row-details';
+                expandTr.innerHTML = `
+                    <td colspan="7" style="padding: 1rem 2rem;">
+                        <div class="grid-4">
+                            <div><div class="text-muted" style="font-size:0.75rem; text-transform:uppercase;">Response</div><div>${isMalicious ? 'NXDOMAIN (0.0.0.0)' : 'Resolved'}</div></div>
+                            <div><div class="text-muted" style="font-size:0.75rem; text-transform:uppercase;">Time</div><div>${new Date(l.timestamp).toLocaleString()}</div></div>
+                            <div><div class="text-muted" style="font-size:0.75rem; text-transform:uppercase;">DoH Provider</div><div>${l.doh_provider || 'N/A'}</div></div>
+                            <div><div class="text-muted" style="font-size:0.75rem; text-transform:uppercase;">Latency</div><div>${l.latency_ms || 0} ms</div></div>
+                        </div>
+                    </td>
+                `;
+
+                tb.appendChild(tr);
+                tb.appendChild(expandTr);
+            });
+            
+            totalPages = data.pagination.pages;
+            document.getElementById('page-info').textContent = `Total: ${data.pagination.total}`;
+            renderPagination(data.pagination);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function renderPagination(p) {
+            const container = document.getElementById('page-btns');
+            container.innerHTML = '';
+            
+            const prev = document.createElement('button');
+            prev.innerHTML = '←';
+            prev.disabled = !p.has_prev;
+            prev.onclick = () => { currentPage--; loadLogs(); };
+            container.appendChild(prev);
+
+            let start = Math.max(1, p.page - 2);
+            let end = Math.min(p.pages, p.page + 2);
+            
+            for (let i = start; i <= end; i++) {
+                const btn = document.createElement('button');
+                btn.textContent = i;
+                if (i === p.page) btn.classList.add('active');
+                btn.onclick = () => { currentPage = i; loadLogs(); };
+                container.appendChild(btn);
+            }
+
+            const next = document.createElement('button');
+            next.innerHTML = '→';
+            next.disabled = !p.has_next;
+            next.onclick = () => { currentPage++; loadLogs(); };
+            container.appendChild(next);
+        }
+
+        async function openWhy(e, id, domain, conf, isMalicious) {
+            if (e) e.stopPropagation();
+            const modal = document.getElementById('why-modal');
+            document.getElementById('modal-domain').textContent = domain;
+            document.getElementById('modal-badge').innerHTML = isMalicious ? 
+                `<span class="badge red">Blocked (${conf}% confidence)</span>` : 
+                `<span class="badge green">Processed (${conf}% confidence)</span>`;
+            
+            modal.classList.add('open');
+            
+            const res = await fetch(`/api/logs/${id}/explain`);
+            if (!res.ok) return;
+            const data = await res.json();
+            
+            const tb = document.getElementById('modal-features');
+            tb.innerHTML = '';
+            const labels = [];
+            const values = [];
+            const colors = [];
+            
+            const style = getComputedStyle(document.documentElement);
+            const gridColor = style.getPropertyValue('--border-color').trim();
+            const textColor = style.getPropertyValue('--text-secondary').trim();
+            
+            const dangerColor = style.getPropertyValue('--danger').trim();
+            const infoColor   = style.getPropertyValue('--info').trim();
+            const rows = [];
+            for (const [feat, val] of Object.entries(data.features)) {
+                rows.push(`<tr><td style="font-weight:500;border-color:${gridColor};">${feat}</td><td style="font-family:monospace;border-color:${gridColor};">${val}</td></tr>`);
+                labels.push(feat);
+                values.push(val);
+                const isHot = (feat === 'Entropy' && val > 3.5) || (feat === 'Domain Length' && val > 25);
+                colors.push(isHot ? dangerColor : infoColor);
+            }
+            tb.innerHTML = rows.join('');
+            
+            const ctx = document.getElementById('whyChart').getContext('2d');
+            if (chartInstance) chartInstance.destroy();
+            
+            chartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Value',
+                        data: values,
+                        backgroundColor: colors,
+                        borderRadius: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { color: gridColor }, ticks: {color: textColor} },
+                        y: { grid: { display: false }, ticks: {color: textColor} }
+                    }
+                }
+            });
+        }
+
+        function closeModal() {
+            document.getElementById('why-modal').classList.remove('open');
+        }
+
+        document.getElementById('why-modal').addEventListener('click', e => {
+            if (e.target === e.currentTarget) closeModal();
+        });
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') closeModal();
+        });
+
+        function exportCSV() {
+            showToast("Preparing download...", "info");
+            const params = getFilterParams();
+            params.delete('page');
+            params.delete('limit');
+            window.location.href = `/api/logs/export?${params.toString()}`;
+            setTimeout(() => showToast("Download started", "success"), 1500);
+        }
+
+        async function sendFeedback(e, logId, label) {
+            e.stopPropagation();
+            const safeBtn = document.getElementById(`fb-safe-${logId}`);
+            const malBtn  = document.getElementById(`fb-mal-${logId}`);
+            try {
+                const r = await fetch(`/api/logs/${logId}/feedback`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({label})
+                });
+                if (!r.ok) { showToast('Feedback failed', 'error'); return; }
+                // Mark both buttons as done, highlight the chosen one
+                [safeBtn, malBtn].forEach(b => { if (b) b.classList.add('fb-done'); });
+                const chosen = label === 'safe' ? safeBtn : malBtn;
+                if (chosen) chosen.style.fontWeight = '800';
+                showToast(label === 'safe' ? 'Marked safe — AI will learn' : 'Confirmed threat — AI will learn', 'success');
+                loadFeedbackStats();
+            } catch { showToast('Network error', 'error'); }
+        }
+
+        async function loadFeedbackStats() {
+            try {
+                const r = await fetch('/api/feedback/stats');
+                if (!r.ok) return;
+                const d = await r.json();
+                if (d.total > 0) {
+                    document.getElementById('feedback-banner').style.display = 'flex';
+                    document.getElementById('fb-count').textContent = d.total;
+                    const next = d.next_retrain_in;
+                    document.getElementById('fb-next').textContent =
+                        next === 0 ? 'Retraining now…' : `${next} more until next retrain`;
+                }
+            } catch {}
+        }
+
+        loadFeedbackStats();
+    </script>
+</body>
+</html>

@@ -1,0 +1,58 @@
+{
+  "accuracy": 0.999814333457111,
+  "oob_score": 0.9998,
+  "precision": 0.999814333457111,
+  "recall": 0.999814333457111,
+  "f1": 0.999814333457111,
+  "train_samples": 215439,
+  "test_samples": 53860,
+  "benign_train": 19746,
+  "malicious_train": 249553,
+  "last_trained": "2026-05-13T22:28:28.492339+00:00",
+  "classes": [
+    "Benign",
+    "Malicious"
+  ],
+  "confusion_matrix": [
+    [
+      3944,
+      5
+    ],
+    [
+      5,
+      49906
+    ]
+  ],
+  "feature_importances": {
+    "Duration": 0.057952,
+    "FlowBytesSent": 0.046671,
+    "FlowSentRate": 0.011422,
+    "FlowBytesReceived": 0.061792,
+    "FlowReceivedRate": 0.014833,
+    "PacketLengthVariance": 0.047013,
+    "PacketLengthStandardDeviation": 0.051787,
+    "PacketLengthMean": 0.083642,
+    "PacketLengthMedian": 0.049929,
+    "PacketLengthMode": 0.246661,
+    "PacketLengthSkewFromMedian": 0.024921,
+    "PacketLengthSkewFromMode": 0.030436,
+    "PacketLengthCoefficientofVariation": 0.040929,
+    "PacketTimeVariance": 0.044914,
+    "PacketTimeStandardDeviation": 0.043454,
+    "PacketTimeMean": 0.026037,
+    "PacketTimeMedian": 0.038165,
+    "PacketTimeMode": 0.002853,
+    "PacketTimeSkewFromMedian": 0.015647,
+    "PacketTimeSkewFromMode": 0.005396,
+    "PacketTimeCoefficientofVariation": 0.015427,
+    "ResponseTimeTimeVariance": 0.005821,
+    "ResponseTimeTimeStandardDeviation": 0.005187,
+    "ResponseTimeTimeMean": 0.005499,
+    "ResponseTimeTimeMedian": 0.011627,
+    "ResponseTimeTimeMode": 0.005197,
+    "ResponseTimeTimeSkewFromMedian": 0.002826,
+    "ResponseTimeTimeSkewFromMode": 0.001994,
+    "ResponseTimeTimeCoefficientofVariation": 0.001968
+  },
+  "n_features": 29
+}

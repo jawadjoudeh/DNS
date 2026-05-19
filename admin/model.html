@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ML Model – SecureDNS Guard Admin</title>
+    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+    <link rel="stylesheet" href="/assets/css/style.css">
+    <style>
+        .admin-sidebar { width: 230px; background: var(--bg-sidebar); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; flex-shrink: 0; }
+        .admin-sidebar-header { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 0.65rem; }
+        .admin-sidebar-title { font-weight: 800; font-size: 1rem; letter-spacing: -0.02em; }
+        .admin-sidebar-badge { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; background: var(--danger); color: #fff; padding: 0.1rem 0.4rem; border-radius: 4px; letter-spacing: 0.06em; }
+        .admin-nav { padding: 1rem 0; flex: 1; display: flex; flex-direction: column; }
+        .admin-nav-item { display: flex; align-items: center; gap: 0.65rem; padding: 0.65rem 1.5rem; color: var(--text-secondary); font-weight: 500; font-size: 0.875rem; border-left: 3px solid transparent; text-decoration: none; transition: all 0.15s; }
+        .admin-nav-item:hover { background: var(--bg-hover); color: var(--text-primary); }
+        .admin-nav-item.active { color: var(--accent); background: var(--accent-glow); border-left-color: var(--accent); font-weight: 600; }
+        .admin-nav-item i { font-style: normal; width: 20px; text-align: center; display: flex; align-items: center; justify-content: center; }
+        .admin-nav-divider { height: 1px; background: var(--border-color); margin: 0.75rem 1rem; }
+        .admin-nav-spacer { flex: 1; }
+        .metric-ring { width: 110px; height: 110px; border-radius: 50%; border: 7px solid var(--border-color); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: 700; margin: 0 auto 0.75rem; }
+        .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: #fff; animation: spin 1s linear infinite; vertical-align: middle; margin-right: 0.5rem; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .model-section-label { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; padding: 0.2rem 0.6rem; border-radius: 4px; margin-bottom: 0.5rem; }
+        .label-flow { background: rgba(93,185,118,0.15); color: var(--success); }
+        .label-domain { background: rgba(88,153,226,0.15); color: var(--info); }
+        .cm-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+        .cm-table th, .cm-table td { border: 1px solid var(--border-color); padding: 0.4rem 0.6rem; text-align: center; }
+        .cm-table th { background: var(--bg-card); font-weight: 600; }
+        .cm-table td.diagonal { background: rgba(93,185,118,0.15); font-weight: 700; color: var(--success); }
+        .feat-bar-wrap { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem; }
+        .feat-bar-bg { flex: 1; height: 8px; background: var(--border-color); border-radius: 4px; overflow: hidden; }
+        .feat-bar-fill { height: 100%; background: var(--accent); border-radius: 4px; transition: width 0.6s; }
+        .feat-label { font-size: 0.75rem; color: var(--text-secondary); width: 260px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .feat-val { font-size: 0.75rem; color: var(--text-primary); width: 45px; text-align: right; }
+        @media (max-width: 860px) { .admin-sidebar { display: none; } }
+    </style>
+</head>
+<body>
+    <div class="app-layout">
+        <aside class="admin-sidebar">
+            <div class="admin-sidebar-header">
+                <div style="width:30px;height:30px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="white" width="17" height="17" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                </div>
+                <div>
+                    <div class="admin-sidebar-title">SecureDNS</div>
+                    <div class="admin-sidebar-badge">Admin</div>
+                </div>
+            </div>
+            <nav class="admin-nav">
+                <a href="/admin/dashboard" class="admin-nav-item"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></i> Dashboard</a>
+                <a href="/admin/logs" class="admin-nav-item"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></i> All Logs</a>
+                <a href="/admin/users" class="admin-nav-item"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></i> Users</a>
+                <a href="/admin/model" class="admin-nav-item active"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg></i> AI Model</a>
+                <div class="admin-nav-divider"></div>
+                <a href="/admin/settings" class="admin-nav-item"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></i> Settings</a>
+                <div class="admin-nav-spacer"></div>
+                <a href="/admin/logout" class="admin-nav-item" style="color:var(--danger);"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></i> Logout</a>
+            </nav>
+        </aside>
+
+        <main class="main-wrapper">
+            <header class="topbar">
+                <span style="font-weight:600;font-size:0.95rem;">ML Model Management</span>
+                <div style="display:flex;align-items:center;gap:0.75rem;">
+                    <span class="badge red" style="font-size:0.65rem;">ADMIN</span>
+                </div>
+            </header>
+
+            <div class="content">
+                <div class="page-header"><h1 class="page-title">Dual AI Models</h1></div>
+
+                <!-- ═══════════ DUAL MODELS ═══════════ -->
+                <div class="model-section-label label-flow">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="12" height="12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
+                    IsolationForest + RandomForest · 10 lexical + 29 flow features · CIRA-CIC-DoHBrw-2020
+                </div>
+
+                <!-- Metric rings -->
+                <div class="grid-4 mb-4">
+                    <div class="card" style="text-align:center;">
+                        <div class="card-header"><h2 class="card-title" style="font-size:0.85rem;">Accuracy</h2></div>
+                        <div class="metric-ring" id="u-acc" style="border-color:var(--success);color:var(--success);">—</div>
+                    </div>
+                    <div class="card" style="text-align:center;">
+                        <div class="card-header"><h2 class="card-title" style="font-size:0.85rem;">Precision</h2></div>
+                        <div class="metric-ring" id="u-prec" style="border-color:var(--info);color:var(--info);">—</div>
+                    </div>
+                    <div class="card" style="text-align:center;">
+                        <div class="card-header"><h2 class="card-title" style="font-size:0.85rem;">Recall</h2></div>
+                        <div class="metric-ring" id="u-rec" style="border-color:var(--warning);color:var(--warning);">—</div>
+                    </div>
+                    <div class="card" style="text-align:center;">
+                        <div class="card-header"><h2 class="card-title" style="font-size:0.85rem;">F1 Score</h2></div>
+                        <div class="metric-ring" id="u-f1" style="border-color:var(--accent);color:var(--accent);">—</div>
+                    </div>
+                </div>
+
+                <!-- Confusion matrix + feature importances -->
+                <div class="grid-2 mb-4" style="gap:1.25rem;">
+                    <div class="card">
+                        <div class="card-header"><h2 class="card-title">Confusion Matrix</h2></div>
+                        <div id="u-cm-wrap"><p class="text-muted" style="font-size:0.875rem;">Not yet trained.</p></div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header"><h2 class="card-title">Top Feature Importances</h2></div>
+                        <div id="u-feat-wrap"><p class="text-muted" style="font-size:0.875rem;">Not yet trained.</p></div>
+                    </div>
+                </div>
+
+                <!-- Training details + retrain button -->
+                <div class="card mb-4">
+                    <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.75rem;">
+                        <h2 class="card-title">Training Details</h2>
+                        <button class="btn" id="u-retrain-btn" onclick="retrain()">Retrain Models</button>
+                    </div>
+                    <div class="grid-4 mb-3" style="gap:1rem;">
+                        <div><div class="text-muted" style="font-size:0.75rem;text-transform:uppercase;margin-bottom:0.25rem;">Train Samples</div><div id="u-samples" style="font-weight:600;">—</div></div>
+                        <div><div class="text-muted" style="font-size:0.75rem;text-transform:uppercase;margin-bottom:0.25rem;">Benign (L2)</div><div id="u-domain-s" style="font-weight:600;">—</div></div>
+                        <div><div class="text-muted" style="font-size:0.75rem;text-transform:uppercase;margin-bottom:0.25rem;">Malicious (L2)</div><div id="u-flow-s" style="font-weight:600;">—</div></div>
+                        <div><div class="text-muted" style="font-size:0.75rem;text-transform:uppercase;margin-bottom:0.25rem;">OOB Score</div><div id="u-fb-s" style="font-weight:600;">—</div></div>
+                    </div>
+                    <div class="grid-4 mb-3" style="gap:1rem;">
+                        <div><div class="text-muted" style="font-size:0.75rem;text-transform:uppercase;margin-bottom:0.25rem;">Classes</div><div id="u-classes" style="font-weight:600;">—</div></div>
+                        <div><div class="text-muted" style="font-size:0.75rem;text-transform:uppercase;margin-bottom:0.25rem;">Features</div><div id="u-feats" style="font-weight:600;">—</div></div>
+                        <div><div class="text-muted" style="font-size:0.75rem;text-transform:uppercase;margin-bottom:0.25rem;">Test Samples</div><div id="u-test" style="font-weight:600;">—</div></div>
+                        <div><div class="text-muted" style="font-size:0.75rem;text-transform:uppercase;margin-bottom:0.25rem;">Last Trained</div><div id="u-trained" style="font-weight:600;">—</div></div>
+                    </div>
+                    <div id="u-retrain-msg" style="font-size:0.875rem;margin-bottom:0.75rem;"></div>
+                    <div id="u-progress-wrap" style="display:none;">
+                        <div style="background:var(--border-color);border-radius:4px;height:8px;overflow:hidden;">
+                            <div id="u-progress-bar" style="height:100%;background:var(--success);border-radius:4px;width:0%;transition:width 0.5s;"></div>
+                        </div>
+                        <div id="u-progress-stage" class="text-muted" style="font-size:0.8rem;margin-top:0.5rem;"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const pct = v => (v !== undefined && v !== null) ? (v * 100).toFixed(1) + '%' : '—';
+
+        async function loadMetrics() {
+            try {
+                const r = await fetch('/admin/api/flow-metrics');
+                if (!r.ok) return;
+                const m = await r.json();
+                if (!m || !m.accuracy) return;
+                document.getElementById('u-acc').textContent    = pct(m.accuracy);
+                document.getElementById('u-prec').textContent   = pct(m.precision);
+                document.getElementById('u-rec').textContent    = pct(m.recall);
+                document.getElementById('u-f1').textContent     = pct(m.f1);
+                document.getElementById('u-samples').textContent  = m.train_samples?.toLocaleString() ?? '—';
+                document.getElementById('u-domain-s').textContent = m.benign_train?.toLocaleString() ?? '—';
+                document.getElementById('u-flow-s').textContent   = m.malicious_train?.toLocaleString() ?? '—';
+                document.getElementById('u-fb-s').textContent     = m.oob_score != null ? (m.oob_score * 100).toFixed(1) + '%' : '—';
+                document.getElementById('u-test').textContent     = m.test_samples?.toLocaleString() ?? '—';
+                document.getElementById('u-classes').textContent  = (m.classes || []).join(', ') || '—';
+                document.getElementById('u-feats').textContent    = m.n_features ? `${m.n_features} flow + 10 lexical` : '—';
+                document.getElementById('u-trained').textContent  = m.last_trained ? new Date(m.last_trained).toLocaleString() : '—';
+                renderCM(m);
+                renderFI(m);
+            } catch {}
+        }
+
+        function renderCM(m) {
+            const wrap = document.getElementById('u-cm-wrap');
+            const cm = m.confusion_matrix, classes = m.classes;
+            if (!cm || !classes) { wrap.innerHTML = '<p class="text-muted" style="font-size:0.875rem;">No data.</p>'; return; }
+            let html = '<div style="overflow-x:auto;"><table class="cm-table"><thead><tr><th>Actual \\ Pred</th>';
+            classes.forEach(c => html += `<th>${c}</th>`);
+            html += '</tr></thead><tbody>';
+            cm.forEach((row, i) => {
+                html += `<tr><th>${classes[i]}</th>`;
+                row.forEach((val, j) => { html += `<td class="${i===j?'diagonal':''}">${val.toLocaleString()}</td>`; });
+                html += '</tr>';
+            });
+            wrap.innerHTML = html + '</tbody></table></div>';
+        }
+
+        function renderFI(m) {
+            const wrap = document.getElementById('u-feat-wrap');
+            const fi = m.feature_importances;
+            if (!fi) { wrap.innerHTML = '<p class="text-muted" style="font-size:0.875rem;">No data.</p>'; return; }
+            const sorted = Object.entries(fi).sort((a,b) => b[1]-a[1]).slice(0,10);
+            const max = sorted[0][1];
+            wrap.innerHTML = sorted.map(([name, val]) => {
+                const w = max > 0 ? (val/max*100).toFixed(1) : 0;
+                return `<div class="feat-bar-wrap">
+                    <span class="feat-label" title="${name}">${name}</span>
+                    <div class="feat-bar-bg"><div class="feat-bar-fill" style="width:${w}%"></div></div>
+                    <span class="feat-val">${(val*100).toFixed(2)}%</span>
+                </div>`;
+            }).join('');
+        }
+
+        let pollTimer = null;
+        async function retrain() {
+            const btn = document.getElementById('u-retrain-btn');
+            const msg = document.getElementById('u-retrain-msg');
+            btn.innerHTML = '<span class="spinner"></span> Starting…'; btn.disabled = true;
+            msg.textContent = '';
+            try {
+                const r = await fetch('/admin/api/retrain', {method:'POST'});
+                const d = await r.json();
+                if (r.ok && d.success) {
+                    document.getElementById('u-progress-wrap').style.display = 'block';
+                    document.getElementById('u-progress-bar').style.width = '0%';
+                    document.getElementById('u-progress-stage').textContent = 'Initializing…';
+                    btn.innerHTML = '<span class="spinner"></span> Training…';
+                    pollTimer = setInterval(pollStatus, 1500);
+                } else {
+                    msg.textContent = d.message || 'Could not start.'; msg.style.color = 'var(--warning)';
+                    btn.innerHTML = 'Retrain Models'; btn.disabled = false;
+                }
+            } catch {
+                msg.textContent = 'Network error.'; msg.style.color = 'var(--danger)';
+                btn.innerHTML = 'Retrain Models'; btn.disabled = false;
+            }
+        }
+
+        async function pollStatus() {
+            try {
+                const r = await fetch('/admin/api/training-status');
+                if (!r.ok) return;
+                const s = await r.json();
+                document.getElementById('u-progress-bar').style.width = (s.progress||0)+'%';
+                document.getElementById('u-progress-stage').textContent = s.stage || '';
+                if (!s.is_training) {
+                    clearInterval(pollTimer); pollTimer = null;
+                    document.getElementById('u-progress-wrap').style.display = 'none';
+                    const msg = document.getElementById('u-retrain-msg');
+                    const btn = document.getElementById('u-retrain-btn');
+                    if (s.error) {
+                        msg.innerHTML = '✕ ' + s.error; msg.style.color = 'var(--danger)';
+                    } else if (s.stage === 'Completed') {
+                        msg.innerHTML = '✓ Training complete — accuracy: <strong>' + pct(s.accuracy) + '</strong>';
+                        msg.style.color = 'var(--success)';
+                        loadMetrics();
+                    }
+                    btn.innerHTML = 'Retrain Models'; btn.disabled = false;
+                }
+            } catch {}
+        }
+
+        loadMetrics();
+    </script>
+</body>
+</html>

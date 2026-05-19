@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard – SecureDNS Guard</title>
+    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+    <link rel="stylesheet" href="/assets/css/style.css">
+    <style>
+        .admin-sidebar { width: 230px; background: var(--bg-sidebar); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; flex-shrink: 0; }
+        .admin-sidebar-header { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 0.65rem; }
+        .admin-sidebar-title { font-weight: 800; font-size: 1rem; letter-spacing: -0.02em; }
+        .admin-sidebar-badge { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; background: var(--danger); color: #fff; padding: 0.1rem 0.4rem; border-radius: 4px; letter-spacing: 0.06em; }
+        .admin-nav { padding: 1rem 0; flex: 1; display: flex; flex-direction: column; }
+        .admin-nav-item { display: flex; align-items: center; gap: 0.65rem; padding: 0.65rem 1.5rem; color: var(--text-secondary); font-weight: 500; font-size: 0.875rem; border-left: 3px solid transparent; text-decoration: none; transition: all 0.15s; }
+        .admin-nav-item:hover { background: var(--bg-hover); color: var(--text-primary); }
+        .admin-nav-item.active { color: var(--accent); background: var(--accent-glow); border-left-color: var(--accent); font-weight: 600; }
+        .admin-nav-item i { font-style: normal; width: 20px; text-align: center; display: flex; align-items: center; justify-content: center; }
+        .admin-nav-divider { height: 1px; background: var(--border-color); margin: 0.75rem 1rem; }
+        .admin-nav-spacer { flex: 1; }
+        .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: #fff; animation: spin 1s linear infinite; vertical-align: middle; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @media (max-width: 860px) { .admin-sidebar { display: none; } }
+    </style>
+</head>
+<body>
+    <div class="app-layout">
+        <aside class="admin-sidebar">
+            <div class="admin-sidebar-header">
+                <div style="width:30px;height:30px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="white" width="17" height="17" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                </div>
+                <div>
+                    <div class="admin-sidebar-title">SecureDNS</div>
+                    <div class="admin-sidebar-badge">Admin</div>
+                </div>
+            </div>
+            <nav class="admin-nav">
+                <a href="/admin/dashboard" class="admin-nav-item active"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></i> Dashboard</a>
+                <a href="/admin/logs" class="admin-nav-item"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></i> All Logs</a>
+                <a href="/admin/users" class="admin-nav-item"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></i> Users</a>
+                <a href="/admin/model" class="admin-nav-item"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg></i> AI Model</a>
+                <div class="admin-nav-divider"></div>
+                <a href="/admin/settings" class="admin-nav-item"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></i> Settings</a>
+                <div class="admin-nav-spacer"></div>
+                <a href="/admin/logout" class="admin-nav-item" style="color:var(--danger);"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></i> Logout</a>
+            </nav>
+        </aside>
+
+        <main class="main-wrapper">
+            <header class="topbar">
+                <span style="font-weight:600;font-size:0.95rem;">Admin Console</span>
+                <div style="display:flex;align-items:center;gap:0.75rem;">
+                    <span class="badge red" style="font-size:0.65rem;">ADMIN</span>
+                </div>
+            </header>
+
+            <div class="content">
+                <div class="page-header"><h1 class="page-title">System Overview</h1></div>
+
+                <div class="grid-4 mb-4">
+                    <div class="card stat-card stat-blue"><div class="stat-title">Total Users</div><div class="stat-value blue skeleton" id="s-users">0</div></div>
+                    <div class="card stat-card"><div class="stat-title">Total Queries</div><div class="stat-value skeleton" id="s-queries" style="color:var(--info);">0</div></div>
+                    <div class="card stat-card stat-red"><div class="stat-title">Blocked</div><div class="stat-value red skeleton" id="s-blocked">0</div></div>
+                    <div class="card stat-card stat-yellow"><div class="stat-title">Model Accuracy</div><div class="stat-value yellow skeleton" id="s-acc">0%</div></div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <script>
+        async function loadOverview() {
+            try {
+                const r = await fetch('/admin/api/overview'); if (!r.ok) return;
+                const d = await r.json();
+                const set = (id,v) => { const e=document.getElementById(id); if(e){e.classList.remove('skeleton');e.textContent=v;} };
+                set('s-users', d.total_users);
+                set('s-queries', d.total_queries.toLocaleString());
+                set('s-blocked', d.total_blocked.toLocaleString());
+                set('s-acc', (d.model_accuracy*100).toFixed(1)+'%');
+            } catch {}
+        }
+        loadOverview(); setInterval(loadOverview, 30000);
+
+    </script>
+</body>
+</html>

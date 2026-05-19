@@ -1,0 +1,25 @@
+{
+  "model_type": "IsolationForest",
+  "false_positive_rate_benign": 0.0181,
+  "mean_score_benign": 0.1783,
+  "accuracy": 0.9819,
+  "contamination": 0.02,
+  "n_estimators": 200,
+  "train_samples": 80000,
+  "test_samples": 20000,
+  "feedback_safe_domains": 0,
+  "last_trained": "2026-05-13T22:28:28.492339+00:00",
+  "n_features": 10,
+  "feature_names": [
+    "domain_length",
+    "subdomain_count",
+    "max_label_len",
+    "entropy",
+    "subdomain_entropy",
+    "digit_ratio",
+    "vowel_ratio",
+    "char_diversity",
+    "max_consecutive_consonants",
+    "tld_risk"
+  ]
+}

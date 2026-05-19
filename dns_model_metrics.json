@@ -1,0 +1,88 @@
+{
+  "accuracy": 0.9995739224929834,
+  "precision": 0.999575386521086,
+  "recall": 0.9995739224929834,
+  "f1": 0.9995743998256885,
+  "train_samples": 1023287,
+  "test_samples": 255822,
+  "domain_samples": 120000,
+  "flow_samples": 1159108,
+  "feedback_samples": 1,
+  "last_trained": "2026-05-10T22:06:53.442470",
+  "classes": [
+    "Benign",
+    "DGA",
+    "Malicious",
+    "Tunneling"
+  ],
+  "confusion_matrix": [
+    [
+      189843,
+      68,
+      0,
+      0
+    ],
+    [
+      23,
+      7977,
+      0,
+      0
+    ],
+    [
+      18,
+      0,
+      49893,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      8000
+    ]
+  ],
+  "feature_importances": {
+    "domain_length": 0.062903,
+    "subdomain_count": 0.108011,
+    "max_label_len": 0.071657,
+    "entropy": 0.078952,
+    "subdomain_entropy": 0.115102,
+    "digit_ratio": 0.052858,
+    "vowel_ratio": 0.001991,
+    "consonant_ratio": 0.041053,
+    "nonalpha_ratio": 0.008857,
+    "has_base64": 0.004339,
+    "Duration": 0.044444,
+    "FlowBytesSent": 0.036306,
+    "FlowSentRate": 0.009214,
+    "FlowBytesReceived": 0.018669,
+    "FlowReceivedRate": 0.014443,
+    "PacketLengthVariance": 0.010614,
+    "PacketLengthStandardDeviation": 0.008336,
+    "PacketLengthMean": 0.032601,
+    "PacketLengthMedian": 0.034313,
+    "PacketLengthMode": 0.078215,
+    "PacketLengthSkewFromMedian": 0.003958,
+    "PacketLengthSkewFromMode": 0.008651,
+    "PacketLengthCoefficientofVariation": 0.007877,
+    "PacketTimeVariance": 0.018108,
+    "PacketTimeStandardDeviation": 0.024629,
+    "PacketTimeMean": 0.023475,
+    "PacketTimeMedian": 0.005809,
+    "PacketTimeMode": 0.0009,
+    "PacketTimeSkewFromMedian": 0.002341,
+    "PacketTimeSkewFromMode": 0.002733,
+    "PacketTimeCoefficientofVariation": 0.01331,
+    "ResponseTimeTimeVariance": 0.001,
+    "ResponseTimeTimeStandardDeviation": 0.004845,
+    "ResponseTimeTimeMean": 0.010558,
+    "ResponseTimeTimeMedian": 0.027055,
+    "ResponseTimeTimeMode": 0.001424,
+    "ResponseTimeTimeSkewFromMedian": 0.003328,
+    "ResponseTimeTimeSkewFromMode": 0.003165,
+    "ResponseTimeTimeCoefficientofVariation": 0.003953
+  },
+  "n_features": 39,
+  "n_lexical": 10,
+  "n_flow": 29
+}

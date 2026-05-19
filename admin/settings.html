@@ -1,0 +1,354 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings – Secure DNS Query Admin</title>
+    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+    <link rel="stylesheet" href="/assets/css/style.css">
+    <style>
+        .admin-sidebar { width: 230px; background: var(--bg-sidebar); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; flex-shrink: 0; }
+        .admin-sidebar-header { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 0.65rem; }
+        .admin-sidebar-title { font-weight: 800; font-size: 1rem; letter-spacing: -0.02em; }
+        .admin-sidebar-badge { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; background: var(--danger); color: #fff; padding: 0.1rem 0.4rem; border-radius: 4px; letter-spacing: 0.06em; }
+        .admin-nav { padding: 1rem 0; flex: 1; display: flex; flex-direction: column; }
+        .admin-nav-item { display: flex; align-items: center; gap: 0.65rem; padding: 0.65rem 1.5rem; color: var(--text-secondary); font-weight: 500; font-size: 0.875rem; border-left: 3px solid transparent; text-decoration: none; transition: all 0.15s; }
+        .admin-nav-item:hover { background: var(--bg-hover); color: var(--text-primary); }
+        .admin-nav-item.active { color: var(--accent); background: var(--accent-glow); border-left-color: var(--accent); font-weight: 600; }
+        .admin-nav-item i { font-style: normal; width: 20px; text-align: center; display: flex; align-items: center; justify-content: center; }
+        .admin-nav-divider { height: 1px; background: var(--border-color); margin: 0.75rem 1rem; }
+        .admin-nav-spacer { flex: 1; }
+
+        .setting-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 2rem; padding: 1.25rem 0; border-bottom: 1px solid var(--border-color); }
+        .setting-row:last-child { border-bottom: none; }
+        .setting-label { font-weight: 600; margin-bottom: 0.25rem; font-size: 0.9rem; }
+        .setting-desc { color: var(--text-secondary); font-size: 0.83rem; line-height: 1.6; }
+        .setting-control { flex-shrink: 0; min-width: 200px; text-align: right; display: flex; align-items: center; justify-content: flex-end; gap: 0.5rem; }
+
+        .toggle-switch { position: relative; width: 44px; height: 24px; display: inline-block; }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .toggle-slider { position: absolute; inset: 0; background: var(--border-color); border-radius: 24px; cursor: pointer; transition: 0.2s; }
+        .toggle-slider::before { content: ''; position: absolute; width: 18px; height: 18px; left: 3px; top: 3px; background: white; border-radius: 50%; transition: 0.2s; box-shadow: var(--shadow-sm); }
+        .toggle-switch input:checked + .toggle-slider { background: var(--accent); }
+        .toggle-switch input:checked + .toggle-slider::before { transform: translateX(20px); }
+
+        .section-header { display: flex; align-items: center; gap: 0.6rem; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-secondary); padding: 0.5rem 0 1rem; margin-top: 1rem; }
+        .section-header::after { content: ''; flex: 1; height: 1px; background: var(--border-color); }
+        .section-header .badge { font-size: 0.6rem; padding: 0.1rem 0.4rem; background: rgba(239,68,68,0.1); color: var(--danger); border-radius: 4px; }
+
+        .bl-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.55rem 0; border-bottom: 1px solid var(--border-color); }
+        .bl-row:last-child { border-bottom: none; }
+        .bl-domain { flex: 1; font-family: 'Courier New', monospace; font-size: 0.82rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .bl-remove { padding: 0.2rem 0.5rem; border-radius: 6px; border: 1px solid var(--border-color); background: transparent; color: var(--danger); font-size: 0.72rem; font-weight: 600; cursor: pointer; }
+        .bl-remove:hover { background: rgba(239,68,68,0.08); border-color: var(--danger); }
+
+        .save-indicator { font-size: 0.78rem; color: var(--success); opacity: 0; transition: opacity 0.3s; }
+        .save-indicator.show { opacity: 1; }
+
+        @keyframes shake { 0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-5px)} 40%,80%{transform:translateX(5px)} }
+        .shake { animation: shake 0.3s ease; }
+
+        @media (max-width: 860px) { .admin-sidebar { display: none; } }
+        @media (max-width: 640px) { .setting-row { flex-direction: column; gap: 0.75rem; } .setting-control { text-align: left; justify-content: flex-start; width: 100%; } }
+    </style>
+</head>
+<body>
+<div class="app-layout">
+
+    <aside class="admin-sidebar">
+        <div class="admin-sidebar-header">
+            <div style="width:30px;height:30px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="white" width="17" height="17" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            </div>
+            <div>
+                <div class="admin-sidebar-title">SecureDNS</div>
+                <div class="admin-sidebar-badge">Admin</div>
+            </div>
+        </div>
+        <nav class="admin-nav">
+            <a href="/admin/dashboard" class="admin-nav-item"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></i> Dashboard</a>
+            <a href="/admin/logs" class="admin-nav-item"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></i> All Logs</a>
+            <a href="/admin/users" class="admin-nav-item"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></i> Users</a>
+            <a href="/admin/model" class="admin-nav-item"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg></i> AI Model</a>
+            <div class="admin-nav-divider"></div>
+            <a href="/admin/settings" class="admin-nav-item active"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></i> Settings</a>
+            <div class="admin-nav-spacer"></div>
+            <a href="/admin/logout" class="admin-nav-item" style="color:var(--danger);"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></i> Logout</a>
+        </nav>
+    </aside>
+
+    <main class="main-wrapper">
+        <header class="topbar">
+            <span style="font-weight:600;font-size:0.95rem;">Admin Settings</span>
+            <div style="display:flex;align-items:center;gap:0.75rem;">
+                <span class="save-indicator" id="save-indicator">✓ Saved</span>
+                <span class="badge red" style="font-size:0.65rem;">ADMIN</span>
+            </div>
+        </header>
+
+        <div class="content">
+            <div class="page-header">
+                <h1 class="page-title">Settings</h1>
+            </div>
+
+            <!-- ── DNS Protection ── -->
+            <div class="section-header">DNS Protection <span class="badge">ADMIN</span></div>
+            <div class="card mb-4">
+                <div class="setting-row">
+                    <div>
+                        <div class="setting-label">Blocking Threshold</div>
+                        <div class="setting-desc">Domains with ML confidence above this level are blocked. Lower = more aggressive.</div>
+                    </div>
+                    <div class="setting-control" style="flex-direction:column;align-items:flex-end;gap:0.35rem;">
+                        <span id="threshold-val-text" style="font-weight:700;font-size:1.1rem;color:var(--accent);">85%</span>
+                        <input type="range" id="threshold-slider" min="50" max="99" value="85" step="1" style="margin:0;width:180px;">
+                    </div>
+                </div>
+                <div class="setting-row">
+                    <div>
+                        <div class="setting-label">Auto-retrain Model</div>
+                        <div class="setting-desc">Periodically retrain the AI model with new traffic data to maintain accuracy.</div>
+                    </div>
+                    <div class="setting-control">
+                        <label class="toggle-switch"><input type="checkbox" id="toggle-retrain"><span class="toggle-slider"></span></label>
+                    </div>
+                </div>
+                <div class="setting-row">
+                    <div>
+                        <div class="setting-label">DNS-over-HTTPS Provider</div>
+                        <div class="setting-desc">Safe queries are forwarded to this encrypted resolver.</div>
+                    </div>
+                    <div class="setting-control">
+                        <select id="doh-provider" style="margin:0;width:auto;">
+                            <option value="cloudflare">Cloudflare (1.1.1.1)</option>
+                            <option value="google">Google (8.8.8.8)</option>
+                            <option value="quad9">Quad9 (9.9.9.9)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Custom Blocklist + AI Model ── -->
+            <div class="section-header">Custom Rules &amp; AI Model <span class="badge">ADMIN</span></div>
+            <div class="grid-2 mb-4">
+                <div class="card">
+                    <div class="card-header"><h2 class="card-title">Custom Blocklist</h2></div>
+                    <p class="text-muted mb-3" style="font-size:0.83rem;">Block domains regardless of ML verdict.</p>
+                    <div style="display:flex;gap:0.5rem;margin-bottom:1rem;">
+                        <input type="text" id="bl-domain" placeholder="malware.example.com" style="margin:0;flex:1;font-family:'Courier New',monospace;font-size:0.83rem;" autocomplete="off">
+                        <button class="btn" onclick="addBlocklist()" style="white-space:nowrap;padding:0 0.85rem;">Add</button>
+                    </div>
+                    <div id="bl-list">
+                        <p class="text-muted" style="font-size:0.83rem;text-align:center;padding:1rem 0;">No custom rules yet.</p>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header"><h2 class="card-title">AI Model</h2></div>
+                    <p class="text-muted mb-3" style="font-size:0.83rem;">Manually trigger a full retrain of the dual ML models (IsolationForest + RandomForest) with the latest traffic data.</p>
+                    <div id="model-info" style="margin-bottom:1rem;font-size:0.82rem;color:var(--text-secondary);"></div>
+                    <button class="btn outline" id="retrain-btn" onclick="retrainModel()">Retrain Model Now</button>
+                    <div id="retrain-msg" style="font-size:0.82rem;margin-top:0.75rem;display:none;"></div>
+                </div>
+            </div>
+
+            <!-- ── Admin Security ── -->
+            <div class="section-header">Admin Security <span class="badge">ADMIN</span></div>
+            <div class="card mb-4">
+                <div class="setting-row">
+                    <div>
+                        <div class="setting-label">Admin Token</div>
+                        <div class="setting-desc">The token used to authenticate at the admin login page. Set via <code style="font-size:0.8rem;background:var(--bg-base);padding:0.1rem 0.35rem;border-radius:4px;">ADMIN_PASSWORD</code> in your <code style="font-size:0.8rem;background:var(--bg-base);padding:0.1rem 0.35rem;border-radius:4px;">.env</code> file.</div>
+                    </div>
+                    <div class="setting-control">
+                        <span class="badge" style="font-size:0.72rem;background:rgba(16,185,129,0.1);color:var(--success);border:1px solid rgba(16,185,129,0.2);">Configured via .env</span>
+                    </div>
+                </div>
+                <div class="setting-row">
+                    <div>
+                        <div class="setting-label">Session Security</div>
+                        <div class="setting-desc">Admin sessions are isolated from regular user sessions. Logging out invalidates the session immediately.</div>
+                    </div>
+                    <div class="setting-control">
+                        <span class="badge" style="font-size:0.72rem;background:rgba(16,185,129,0.1);color:var(--success);border:1px solid rgba(16,185,129,0.2);">Active</span>
+                    </div>
+                </div>
+                <div class="setting-row">
+                    <div>
+                        <div class="setting-label">Danger Zone</div>
+                        <div class="setting-desc">Clear all DNS query logs from the database. This action cannot be undone.</div>
+                    </div>
+                    <div class="setting-control">
+                        <button class="btn danger" style="padding:0.4rem 1rem;font-size:0.82rem;" onclick="confirmClearLogs()">Clear All Logs</button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+</div>
+
+<!-- Confirm Modal -->
+<div class="modal-overlay" id="confirmModal">
+    <div class="modal-content" style="max-width:360px;text-align:center;">
+        <div style="margin-bottom:0.75rem;color:var(--warning);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="40" height="40" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+        <div style="font-size:1.05rem;font-weight:700;margin-bottom:0.5rem;">Clear All Logs?</div>
+        <p style="color:var(--text-secondary);font-size:0.875rem;margin-bottom:1.5rem;">This will permanently delete all DNS query logs. This action cannot be undone.</p>
+        <div style="display:flex;gap:0.75rem;justify-content:center;">
+            <button class="btn outline" onclick="document.getElementById('confirmModal').classList.remove('open')">Cancel</button>
+            <button class="btn danger" id="confirm-clear-btn" onclick="clearLogs()">Delete All Logs</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let saveTimeout;
+
+    function flashSaved() {
+        const el = document.getElementById('save-indicator');
+        el.classList.add('show');
+        setTimeout(() => el.classList.remove('show'), 2000);
+    }
+
+    // Load settings
+    async function loadSettings() {
+        try {
+            const res = await fetch('/api/settings');
+            if (!res.ok) return;
+            const s = await res.json();
+            document.getElementById('threshold-slider').value = s.threshold ?? 85;
+            document.getElementById('toggle-retrain').checked  = s.auto_retrain !== false;
+            document.getElementById('doh-provider').value       = s.doh_provider || 'cloudflare';
+            updateThresholdText();
+        } catch {}
+    }
+
+    function updateThresholdText() {
+        document.getElementById('threshold-val-text').textContent = document.getElementById('threshold-slider').value + '%';
+    }
+
+    function debounceSave() { clearTimeout(saveTimeout); saveTimeout = setTimeout(saveSettings, 600); }
+
+    async function saveSettings() {
+        const data = {
+            threshold:    parseInt(document.getElementById('threshold-slider').value),
+            auto_retrain: document.getElementById('toggle-retrain').checked,
+            doh_provider: document.getElementById('doh-provider').value
+        };
+        try {
+            const res = await fetch('/api/settings', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
+            if (res.ok) flashSaved();
+        } catch {}
+    }
+
+    document.getElementById('threshold-slider').addEventListener('input', () => { updateThresholdText(); debounceSave(); });
+    document.getElementById('toggle-retrain').addEventListener('change', saveSettings);
+    document.getElementById('doh-provider').addEventListener('change', saveSettings);
+
+    // Blocklist
+    async function fetchBlocklist() {
+        try {
+            const res = await fetch('/api/blacklist');
+            if (!res.ok) return;
+            const list = await res.json();
+            const container = document.getElementById('bl-list');
+            container.innerHTML = '';
+            if (list.length === 0) {
+                container.innerHTML = '<p class="text-muted" style="font-size:0.83rem;text-align:center;padding:1rem 0;">No custom rules yet.</p>';
+                return;
+            }
+            list.forEach(item => {
+                const row = document.createElement('div');
+                row.className = 'bl-row';
+                const d = document.createElement('span');
+                d.className = 'bl-domain';
+                d.textContent = item.domain;
+                const btn = document.createElement('button');
+                btn.className = 'bl-remove';
+                btn.textContent = 'Remove';
+                btn.addEventListener('click', () => removeBlocklist(item.domain));
+                row.appendChild(d);
+                row.appendChild(btn);
+                container.appendChild(row);
+            });
+        } catch {}
+    }
+
+    async function addBlocklist() {
+        const input = document.getElementById('bl-domain');
+        const domain = input.value.trim();
+        if (!domain) return;
+        try {
+            await fetch('/api/blacklist/add', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({domain}) });
+            input.value = '';
+            flashSaved();
+            fetchBlocklist();
+        } catch {}
+    }
+    document.getElementById('bl-domain').addEventListener('keypress', e => { if (e.key === 'Enter') addBlocklist(); });
+
+    async function removeBlocklist(domain) {
+        try {
+            await fetch('/api/blacklist/remove', { method: 'DELETE', headers: {'Content-Type':'application/json'}, body: JSON.stringify({domain}) });
+            fetchBlocklist();
+        } catch {}
+    }
+
+    // Model info + retrain
+    async function loadModelInfo() {
+        try {
+            const r = await fetch('/admin/api/model-metrics');
+            if (!r.ok) return;
+            const d = await r.json();
+            const el = document.getElementById('model-info');
+            if (d.last_trained) {
+                el.textContent = 'Last trained: ' + new Date(d.last_trained).toLocaleString() + ' · ' + (d.train_samples || 0).toLocaleString() + ' samples';
+            }
+        } catch {}
+    }
+
+    async function retrainModel() {
+        const btn = document.getElementById('retrain-btn');
+        const msg = document.getElementById('retrain-msg');
+        btn.innerHTML = '<span class="spinner"></span> Training…';
+        btn.disabled = true;
+        msg.style.display = 'none';
+        try {
+            const res = await fetch('/api/model/retrain', { method: 'POST' });
+            const d = await res.json();
+            msg.textContent = d.message || (res.ok ? 'Retrain complete.' : 'Retrain failed.');
+            msg.style.color = res.ok ? 'var(--success)' : 'var(--danger)';
+            msg.style.display = 'block';
+            if (res.ok) loadModelInfo();
+        } catch {
+            msg.textContent = 'Network error.';
+            msg.style.color = 'var(--danger)';
+            msg.style.display = 'block';
+        }
+        btn.textContent = 'Retrain Model Now';
+        btn.disabled = false;
+    }
+
+    // Clear logs
+    function confirmClearLogs() {
+        document.getElementById('confirmModal').classList.add('open');
+    }
+
+    async function clearLogs() {
+        const btn = document.getElementById('confirm-clear-btn');
+        btn.innerHTML = '<span class="spinner"></span> Clearing…';
+        btn.disabled = true;
+        try {
+            const res = await fetch('/admin/api/clear-logs', { method: 'POST' });
+            document.getElementById('confirmModal').classList.remove('open');
+            if (res.ok) flashSaved();
+        } catch {}
+        btn.textContent = 'Delete All Logs';
+        btn.disabled = false;
+    }
+
+    loadSettings();
+    fetchBlocklist();
+    loadModelInfo();
+</script>
+</body>
+</html>

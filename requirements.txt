@@ -1,0 +1,28 @@
+# ══════════════════════════════════════════════════════════════════
+#  SecureDNS Guard – Python dependencies
+#  All versions confirmed latest from PyPI as of April 2026
+#  Install: pip install -r requirements.txt
+# ══════════════════════════════════════════════════════════════════
+
+# ── Web framework ─────────────────────────────────────────────────
+Flask==3.1.3
+flask-cors==6.0.2
+python-dotenv==1.1.0
+
+# ── Auth ──────────────────────────────────────────────────────────
+bcrypt==4.3.0
+
+# ── ML stack ──────────────────────────────────────────────────────
+numpy==2.4.4
+pandas==3.0.2
+scikit-learn==1.8.0
+joblib==1.5.0
+
+# ── Networking / DNS ──────────────────────────────────────────────
+requests==2.32.3
+# ── HTTP utils (pulled in by Flask/requests, pinned for stability) ─
+Werkzeug==3.1.3
+urllib3==2.4.0
+certifi==2025.4.26
+charset-normalizer==3.4.2
+idna==3.10

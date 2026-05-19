@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Account – SecureDNS Guard</title>
+    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+    <link rel="stylesheet" href="/assets/css/style.css">
+    <style>
+        .auth-wrapper {
+            background-image:
+                radial-gradient(ellipse at top left, var(--accent-glow) 0%, transparent 40%),
+                radial-gradient(ellipse at bottom right, rgba(59,130,246,0.08) 0%, transparent 40%);
+        }
+        .auth-card { animation: modalIn 0.4s ease; }
+
+        .field-label {
+            font-weight: 600; font-size: 0.8rem; margin-bottom: 0.35rem;
+            display: block; color: var(--text-secondary);
+            text-transform: uppercase; letter-spacing: 0.05em;
+        }
+        .password-hint { font-size: 0.75rem; color: var(--text-secondary); margin-top: -0.75rem; margin-bottom: 1rem; }
+
+        .divider { display: flex; align-items: center; margin: 1.5rem 0; gap: 0.75rem; }
+        .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border-color); }
+        .divider span { color: var(--text-secondary); font-size: 0.8rem; font-weight: 500; white-space: nowrap; }
+
+        .oauth-btn {
+            display: flex; align-items: center; justify-content: center; gap: 0.65rem;
+            width: 100%; padding: 0.6rem 1rem;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-light);
+            border-radius: var(--border-radius-sm);
+            color: var(--text-primary);
+            font-weight: 600; font-size: 0.875rem;
+            cursor: pointer; text-decoration: none;
+            transition: all var(--transition);
+            margin-bottom: 0.65rem;
+        }
+        .oauth-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+        .oauth-btn:last-child { margin-bottom: 0; }
+        .oauth-icon { width: 18px; height: 18px; flex-shrink: 0; }
+
+        .strength-bar { display: flex; gap: 3px; margin-top: -0.6rem; margin-bottom: 1rem; }
+        .strength-seg { height: 3px; flex: 1; border-radius: 2px; background: var(--border-color); transition: background 0.3s; }
+        .strength-seg.weak   { background: var(--danger); }
+        .strength-seg.medium { background: var(--warning); }
+        .strength-seg.strong { background: var(--success); }
+        .pw-wrap { position: relative; }
+        .pw-wrap input { padding-right: 2.75rem; }
+        .pw-toggle { position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--text-secondary); padding: 0; line-height: 1; }
+        .pw-toggle:hover { color: var(--text-primary); }
+        .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: #fff; animation: spin 1s linear infinite; vertical-align: middle; margin-right: 0.5rem; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="auth-wrapper">
+        <div class="card auth-card" style="width:100%; max-width:460px;">
+
+            <div class="auth-header">
+                <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" width="44" height="44" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                <h2 style="margin-top:0.65rem; font-weight:700;">Create Account</h2>
+                <p class="text-muted" style="margin-top:0.25rem; font-size:0.875rem;">Join SecureDNS Guard to protect your network</p>
+            </div>
+
+            <!-- OAuth buttons — shown only when provider is configured -->
+            <div id="oauth-section" style="display:none;">
+                <div id="oauth-buttons"></div>
+                <div class="divider"><span>OR continue with email</span></div>
+            </div>
+
+            <form id="registerForm" novalidate>
+                <div>
+                    <label class="field-label">Username</label>
+                    <input type="text" id="username" placeholder="johndoe" required autocomplete="username"
+                           pattern="[a-zA-Z0-9_]+" title="Letters, numbers, and underscores only">
+                </div>
+                <div>
+                    <label class="field-label">Email</label>
+                    <input type="email" id="email" placeholder="john@example.com" required autocomplete="email">
+                </div>
+                <div>
+                    <label class="field-label">Password</label>
+                    <div class="pw-wrap">
+                        <input type="password" id="password" placeholder="Min 8 characters" required minlength="8" autocomplete="new-password">
+                        <button type="button" class="pw-toggle" onclick="togglePw('password', this)" tabindex="-1" aria-label="Show password">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="18" height="18" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        </button>
+                    </div>
+                    <div class="strength-bar" id="strength-bar">
+                        <div class="strength-seg" id="seg1"></div>
+                        <div class="strength-seg" id="seg2"></div>
+                        <div class="strength-seg" id="seg3"></div>
+                        <div class="strength-seg" id="seg4"></div>
+                    </div>
+                </div>
+                <div>
+                    <label class="field-label">Confirm Password</label>
+                    <div class="pw-wrap">
+                        <input type="password" id="password2" placeholder="Re-enter password" required autocomplete="new-password">
+                        <button type="button" class="pw-toggle" onclick="togglePw('password2', this)" tabindex="-1" aria-label="Show password">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="18" height="18" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn" id="submit-btn" style="width:100%; padding:0.65rem;">
+                    Create Account
+                </button>
+                <div id="error-msg" class="text-danger" style="text-align:center; font-size:0.875rem; margin-top:1rem;"></div>
+            </form>
+
+            <div style="text-align:center; margin-top:1.5rem; font-size:0.9rem;">
+                <span class="text-muted">Already have an account?</span>
+                <a href="/login" style="font-weight:600; margin-left:0.25rem;">Sign In</a>
+            </div>
+            <div style="text-align:center; margin-top:0.75rem; font-size:0.85rem;">
+                <a href="/" style="color:var(--text-secondary);">← Back to Home</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function togglePw(id, btn) {
+            const input = document.getElementById(id);
+            const show = input.type === 'password';
+            input.type = show ? 'text' : 'password';
+            btn.innerHTML = show
+                ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="18" height="18" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>'
+                : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="18" height="18" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+            btn.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+        }
+
+        /* ── OAuth provider detection ── */
+        fetch('/api/auth/providers').then(r => r.json()).then(p => {
+            const container = document.getElementById('oauth-buttons');
+            let has = false;
+
+            if (p.google) {
+                container.innerHTML += `
+                <a href="/api/auth/google/login?next=/register" class="oauth-btn">
+                    <svg class="oauth-icon" viewBox="0 0 24 24">
+                        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+                        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                    </svg>
+                    Continue with Google
+                </a>`;
+                has = true;
+            }
+
+
+
+            if (has) document.getElementById('oauth-section').style.display = 'block';
+        }).catch(() => {});
+
+        /* ── Password strength meter ── */
+        document.getElementById('password').addEventListener('input', function () {
+            const v = this.value;
+            let score = 0;
+            if (v.length >= 8)  score++;
+            if (/[A-Z]/.test(v)) score++;
+            if (/[0-9]/.test(v)) score++;
+            if (/[^A-Za-z0-9]/.test(v)) score++;
+            const cls = score <= 1 ? 'weak' : score === 2 ? 'medium' : 'strong';
+            for (let i = 1; i <= 4; i++) {
+                const seg = document.getElementById('seg' + i);
+                seg.className = 'strength-seg' + (i <= score ? ' ' + cls : '');
+            }
+        });
+
+        /* ── Form submit ── */
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn    = document.getElementById('submit-btn');
+            const errEl  = document.getElementById('error-msg');
+            errEl.textContent = '';
+
+            const password  = document.getElementById('password').value;
+            const password2 = document.getElementById('password2').value;
+            if (password !== password2) { errEl.textContent = 'Passwords do not match.'; return; }
+
+            btn.innerHTML = '<span class="spinner"></span> Creating account…';
+            btn.disabled  = true;
+
+            try {
+                const res = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        username: document.getElementById('username').value,
+                        email:    document.getElementById('email').value,
+                        password
+                    })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    /* Store key in sessionStorage so dashboard can show it once */
+                    if (data.api_key) sessionStorage.setItem('new_api_key', data.api_key);
+                    window.location.href = data.redirect || '/user_dashboard';
+                } else {
+                    errEl.textContent = data.error || 'Registration failed.';
+                    btn.textContent = 'Create Account';
+                    btn.disabled = false;
+                }
+            } catch {
+                errEl.textContent = 'Network error. Please try again.';
+                btn.textContent = 'Create Account';
+                btn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

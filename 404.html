@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>404 – Not Found | SecureDNS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+a{text-decoration:none;color:inherit}
+:root{--bg:#0a0c0a;--accent:#00e87a;--accent-dim:#00b85f;--text:#e8f0e8;--muted:#5a6e5a;--border:#1a2a1a}
+html,body{height:100%}
+body{font-family:'Syne',system-ui,sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:2rem;-webkit-font-smoothing:antialiased;text-align:center}
+::selection{background:rgba(0,232,122,0.2)}
+
+.glitch{
+  font-family:'IBM Plex Mono',monospace;font-size:clamp(5rem,20vw,9rem);font-weight:700;
+  color:var(--accent);letter-spacing:-0.05em;line-height:1;
+  text-shadow:0 0 40px rgba(0,232,122,0.3);
+  animation:flicker 3s infinite;
+}
+@keyframes flicker{0%,95%,100%{opacity:1}96%,98%{opacity:0.6}97%,99%{opacity:0.9}}
+
+.title{font-size:clamp(1.1rem,4vw,1.6rem);font-weight:800;letter-spacing:-0.03em;margin:0.75rem 0 0.4rem;color:var(--text)}
+.sub{font-size:0.9rem;color:var(--muted);max-width:380px;line-height:1.55;margin-bottom:2.25rem}
+
+.mono-line{
+  font-family:'IBM Plex Mono',monospace;font-size:0.75rem;
+  color:var(--muted);border:1px solid var(--border);border-radius:6px;
+  padding:0.3rem 0.85rem;margin-bottom:2rem;display:inline-block;
+}
+.mono-line span{color:var(--accent)}
+
+.btn-group{display:flex;gap:0.75rem;flex-wrap:wrap;justify-content:center}
+.btn{
+  display:inline-flex;align-items:center;gap:0.4rem;
+  padding:0.68rem 1.5rem;border-radius:8px;
+  font-family:'Syne',sans-serif;font-size:0.88rem;font-weight:700;
+  cursor:pointer;transition:transform 0.2s,box-shadow 0.2s,filter 0.2s;
+}
+.btn-primary{background:var(--accent);color:#050f05;border:none;box-shadow:0 2px 14px rgba(0,232,122,0.25)}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 4px 24px rgba(0,232,122,0.4);filter:brightness(1.06)}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border)}
+.btn-ghost:hover{border-color:var(--accent);color:var(--accent);transform:translateY(-1px)}
+</style>
+</head>
+<body>
+
+<div class="glitch">404</div>
+<div class="title">Page Not Found</div>
+<div class="sub">The page you're looking for doesn't exist or has been moved.</div>
+
+<div class="mono-line">error: <span>ROUTE_NOT_FOUND</span> — path not mapped</div>
+
+<div class="btn-group">
+  <a href="/" class="btn btn-primary">Back to Home</a>
+  <a href="/dashboard" class="btn btn-ghost">Go to Dashboard</a>
+</div>
+
+</body>
+</html>

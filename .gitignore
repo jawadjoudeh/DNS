@@ -1,0 +1,41 @@
+# ── Secrets ──────────────────────────────────────────────
+.env
+
+# ── Databases (contain user/log data) ────────────────────
+*.db
+data/users.db
+dns_logs.db
+
+# ── Large dataset files ───────────────────────────────────
+dns_data/
+
+# ── Large ML model binaries ───────────────────────────────
+models/flow_classifier.pkl
+models/dns_classifier.pkl
+models/unified_classifier.pkl
+
+# ── Python cache ──────────────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+
+*.pyd
+
+# ── IDE & tool files ──────────────────────────────────────
+.idea/
+.vscode/
+.claude/
+*.iml
+
+# ── Virtual environment ───────────────────────────────────
+.venv/
+venv/
+env/
+
+# ── Log files ─────────────────────────────────────────────
+proxy_log.txt
+*.log
+
+# ── OS files ──────────────────────────────────────────────
+.DS_Store
+Thumbs.db
