@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 import joblib
 from sklearn.ensemble import RandomForestClassifier, IsolationForest
-from sklearn.model_selection import StratifiedShuffleSplit
+from sklearn.model_selection import StratifiedShuffleSplit, GroupShuffleSplit, KFold
 from sklearn.metrics import precision_score, recall_score, f1_score, confusion_matrix
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
@@ -366,12 +366,22 @@ def _load_benign_domains(n=100_000):
     return domains
 
 
+# Columns used to build session group keys — all flows between the same
+# IP pair belong to one session and must stay in the same split.
+_GROUP_COLS = ["SourceIP", "DestinationIP"]
+
+
 def _load_flow_csv(path, label, max_rows=None):
-    """Load a flow CSV → (X, y) where X has N_FLOW columns."""
+    """Load a flow CSV → (X, y, groups) where X has N_FLOW columns.
+
+    *groups* is a string array of IP-pair keys used by GroupShuffleSplit
+    to prevent data leakage between train and test sets.
+    """
     try:
+        use_cols = FLOW_FEATURES + _GROUP_COLS
         chunks = []
         reader = pd.read_csv(
-            path, usecols=FLOW_FEATURES,
+            path, usecols=use_cols,
             on_bad_lines="skip", chunksize=50_000,
         )
         loaded = 0
@@ -379,19 +389,20 @@ def _load_flow_csv(path, label, max_rows=None):
             chunk = chunk.dropna(subset=FLOW_FEATURES)
             if max_rows and loaded + len(chunk) > max_rows:
                 chunk = chunk.iloc[: max_rows - loaded]
-            chunks.append(chunk[FLOW_FEATURES])
+            chunks.append(chunk[use_cols])
             loaded += len(chunk)
             if max_rows and loaded >= max_rows:
                 break
         if not chunks:
-            return None, None
-        df = pd.concat(chunks, ignore_index=True)
-        X  = df[FLOW_FEATURES].values.astype(np.float32)
-        y  = np.array([label] * len(X))
-        return X, y
+            return None, None, None
+        df     = pd.concat(chunks, ignore_index=True)
+        X      = df[FLOW_FEATURES].values.astype(np.float32)
+        y      = np.array([label] * len(X))
+        groups = (df["SourceIP"].astype(str) + "→" + df["DestinationIP"].astype(str)).values
+        return X, y, groups
     except Exception:
         logger.exception("flow CSV error %s", path)
-        return None, None
+        return None, None, None
 
 
 def _load_safe_feedback_domains():
@@ -450,14 +461,36 @@ def train_async():
         TRAINING_STATUS.update({"stage": "Extracting lexical features", "progress": 14})
         X_lex = np.array([_extract_lexical(d) for d in benign_raw], dtype=np.float32)
 
-        # 80 / 20 split — test set measures false-positive rate on held-out benign domains
-        rng_np = np.random.RandomState(42)
-        idx    = rng_np.permutation(len(X_lex))
-        split  = int(len(X_lex) * 0.8)
-        X_tr, X_te = X_lex[idx[:split]], X_lex[idx[split:]]
-        logger.info("Lexical training set: %d  test set: %d", len(X_tr), len(X_te))
+        # ── 5-fold cross-validation to measure FPR reliably ──────────
+        TRAINING_STATUS.update({"stage": "Cross-validating IsolationForest (5 folds)…", "progress": 18})
+        kf = KFold(n_splits=5, shuffle=True, random_state=42)
+        fold_fprs = []
+        fold_means = []
+        for fold_i, (tr_idx, te_idx) in enumerate(kf.split(X_lex), 1):
+            fold_clf = Pipeline([
+                ("scaler", StandardScaler()),
+                ("iforest", IsolationForest(
+                    n_estimators=200,
+                    contamination=_CONTAMINATION,
+                    random_state=42,
+                    n_jobs=-1,
+                )),
+            ])
+            fold_clf.fit(X_lex[tr_idx])
+            scores = fold_clf.decision_function(X_lex[te_idx])
+            fold_fprs.append(float((scores < 0).mean()))
+            fold_means.append(float(scores.mean()))
+            logger.info("  Fold %d/%d — FPR=%.2f%%", fold_i, 5, fold_fprs[-1] * 100)
 
-        TRAINING_STATUS.update({"stage": "Training IsolationForest…", "progress": 22})
+        cv_fpr  = float(np.mean(fold_fprs))
+        cv_mean = float(np.mean(fold_means))
+        logger.info(
+            "Lexical IsolationForest CV — mean FPR: %.2f%%  mean score: %.3f",
+            cv_fpr * 100, cv_mean,
+        )
+
+        # ── Train final model on ALL data ─────────────────────────────
+        TRAINING_STATUS.update({"stage": "Training final IsolationForest…", "progress": 30})
         clf_lex = Pipeline([
             ("scaler", StandardScaler()),
             ("iforest", IsolationForest(
@@ -467,16 +500,10 @@ def train_async():
                 n_jobs=-1,
             )),
         ])
-        clf_lex.fit(X_tr)
+        clf_lex.fit(X_lex)
 
-        TRAINING_STATUS.update({"stage": "Evaluating lexical anomaly detector…", "progress": 40})
-        scores_te  = clf_lex.decision_function(X_te)
-        fpr_benign = float((scores_te < 0).mean())   # fraction of benign domains wrongly flagged
-        mean_score = float(scores_te.mean())
-        logger.info(
-            "Lexical IsolationForest — FPR on benign test: %.2f%%  mean score: %.3f",
-            fpr_benign * 100, mean_score,
-        )
+        fpr_benign = cv_fpr
+        mean_score = cv_mean
 
         now = datetime.now(timezone.utc).isoformat()
         os.makedirs(os.path.dirname(LEXICAL_MODEL_PATH), exist_ok=True)
@@ -486,15 +513,16 @@ def train_async():
             _cache.clear()
 
         lex_metrics = {
-            "model_type":                 "IsolationForest",
+            "model_type":                 "IsolationForest + StandardScaler",
+            "evaluation":                 "5-fold cross-validation",
             "false_positive_rate_benign": round(fpr_benign, 4),
             "mean_score_benign":          round(mean_score, 4),
+            "fold_fprs":                  [round(f, 4) for f in fold_fprs],
             # accuracy = how often benign domains correctly pass through
             "accuracy":                   round(1.0 - fpr_benign, 4),
-            "contamination":              _CONTAMINATION,
+            "contamination":              str(_CONTAMINATION),
             "n_estimators":               200,
-            "train_samples":              len(X_tr),
-            "test_samples":               len(X_te),
+            "train_samples":              len(X_lex),
             "feedback_safe_domains":      len(fb_safe),
             "last_trained":               now,
             "n_features":                 N_LEXICAL,
@@ -505,7 +533,7 @@ def train_async():
 
         TRAINING_STATUS.update({
             "accuracy":      1.0 - fpr_benign,
-            "train_samples": len(X_tr),
+            "train_samples": len(X_lex),
             "last_trained":  now,
         })
 
@@ -524,7 +552,7 @@ def train_async():
             (os.path.join(_DATA_DIR, "l2-malicious.csv"), "Malicious", None),
         ]
 
-        flow_Xs, flow_ys = [], []
+        flow_Xs, flow_ys, flow_groups = [], [], []
         for i, (path, label, cap) in enumerate(flow_sources):
             TRAINING_STATUS.update({
                 "stage":    f"Loading flow data: {os.path.basename(path)}",
@@ -533,30 +561,47 @@ def train_async():
             if not os.path.exists(path):
                 logger.warning("Missing flow file: %s — skipping", path)
                 continue
-            X_f, y_f = _load_flow_csv(path, label, max_rows=cap)
+            X_f, y_f, g_f = _load_flow_csv(path, label, max_rows=cap)
             if X_f is not None:
                 flow_Xs.append(X_f)
                 flow_ys.append(y_f)
+                flow_groups.append(g_f)
                 logger.info("Flow %s (%s): %d rows", label, os.path.basename(path), len(X_f))
 
         if flow_Xs:
-            TRAINING_STATUS.update({"stage": "Training flow classifier…", "progress": 72})
+            TRAINING_STATUS.update({"stage": "Preparing flow data…", "progress": 68})
             X_flow = np.vstack(flow_Xs)
             y_flow = np.concatenate(flow_ys)
+            g_flow = np.concatenate(flow_groups)
 
             benign_count    = int((y_flow == "Benign").sum())
             malicious_count = int((y_flow == "Malicious").sum())
+            n_groups        = len(np.unique(g_flow))
             logger.info(
-                "Flow dataset — Benign:%d  Malicious:%d  imbalance ratio 1:%.1f",
-                benign_count, malicious_count, malicious_count / max(benign_count, 1),
+                "Flow dataset — Benign:%d  Malicious:%d  imbalance 1:%.1f  IP-pair groups:%d",
+                benign_count, malicious_count, malicious_count / max(benign_count, 1), n_groups,
             )
 
-            sss = StratifiedShuffleSplit(n_splits=1, test_size=0.2, random_state=42)
-            tr2, te2 = next(sss.split(X_flow, y_flow))
+            # ── Session-aware split: all flows from the same IP pair stay
+            #    in the same partition → prevents data leakage ──────────
+            gss = GroupShuffleSplit(n_splits=1, test_size=0.2, random_state=42)
+            tr2, te2 = next(gss.split(X_flow, y_flow, groups=g_flow))
             X_ftr, X_fte = X_flow[tr2], X_flow[te2]
             y_ftr, y_fte = y_flow[tr2], y_flow[te2]
 
-            # class_weight="balanced" corrects for Benign:Malicious ≈ 1:12.6
+            # ── SMOTE: oversample the minority class (Benign) to balance
+            #    the training set instead of relying only on class_weight ─
+            TRAINING_STATUS.update({"stage": "Balancing flow data (SMOTE)…", "progress": 72})
+            try:
+                from imblearn.over_sampling import SMOTE
+                smote = SMOTE(random_state=42, n_jobs=-1)
+                X_ftr, y_ftr = smote.fit_resample(X_ftr, y_ftr)
+                logger.info("SMOTE applied — resampled train: Benign:%d  Malicious:%d",
+                            int((y_ftr == "Benign").sum()), int((y_ftr == "Malicious").sum()))
+            except ImportError:
+                logger.warning("imbalanced-learn not installed — falling back to class_weight only")
+
+            TRAINING_STATUS.update({"stage": "Training flow classifier…", "progress": 78})
             clf_flow = RandomForestClassifier(
                 n_estimators=150, n_jobs=-1,
                 random_state=42, oob_score=True,
