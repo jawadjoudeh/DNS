@@ -41,10 +41,10 @@ _CACHE_MAX                  = 10_000
 _CACHE_TTL                  = 300
 _BLACKLIST_TTL              = 300
 
-# Let sklearn decide the optimal contamination threshold based on the data.
-# "auto" uses the offset-based method from the original IsolationForest paper,
-# which is more principled than a hardcoded value.
-_CONTAMINATION = "auto"
+# Contamination: the expected fraction of anomalies in the Tranco training corpus.
+# "auto" was tested but produced FPR ~16.7% (too aggressive).
+# 0.02 (2%) is conservative and keeps FPR around 1.7%.
+_CONTAMINATION = 0.02
 
 # ---------------------------------------------------------------------------
 # Feature definitions
@@ -594,7 +594,7 @@ def train_async():
             TRAINING_STATUS.update({"stage": "Balancing flow data (SMOTE)…", "progress": 72})
             try:
                 from imblearn.over_sampling import SMOTE
-                smote = SMOTE(random_state=42, n_jobs=-1)
+                smote = SMOTE(random_state=42)
                 X_ftr, y_ftr = smote.fit_resample(X_ftr, y_ftr)
                 logger.info("SMOTE applied — resampled train: Benign:%d  Malicious:%d",
                             int((y_ftr == "Benign").sum()), int((y_ftr == "Malicious").sum()))
