@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Help – SecureDNS Guard</title>
+    <title>Help – Secure DNS Queries</title>
     <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
     <link rel="stylesheet" href="/assets/css/style.css">
     <style>
@@ -35,8 +35,8 @@
                 <div class="help-category">General</div>
 
                 <div class="faq-item open" onclick="this.classList.toggle('open')">
-                    <div class="faq-q">What is SecureDNS Guard? <span class="icon">+</span></div>
-                    <div class="faq-a">SecureDNS Guard is a DNS-level security proxy. It intercepts outgoing DNS requests, runs them through a Machine Learning model (Random Forest) to detect threats like Domain Generation Algorithms (DGA) and DNS Tunneling, and blocks malicious queries in real time. Safe queries are forwarded securely via DNS-over-HTTPS.</div>
+                    <div class="faq-q">What is Secure DNS Queries? <span class="icon">+</span></div>
+                    <div class="faq-a">Secure DNS Queries is a DNS-level security proxy. It intercepts outgoing DNS requests, runs them through a Machine Learning model (Random Forest) to detect threats like Domain Generation Algorithms (DGA) and DNS Tunneling, and blocks malicious queries in real time. Safe queries are forwarded securely via DNS-over-HTTPS.</div>
                 </div>
 
                 <div class="faq-item" onclick="this.classList.toggle('open')">
@@ -46,7 +46,7 @@
 
                 <div class="faq-item" onclick="this.classList.toggle('open')">
                     <div class="faq-q">What is DNS-over-HTTPS (DoH)? <span class="icon">+</span></div>
-                    <div class="faq-a">DoH encrypts your DNS queries inside HTTPS so that your ISP or anyone on the network cannot see which domains you visit. SecureDNS Guard forwards all "safe" queries through DoH providers like Cloudflare, Google, or Quad9.</div>
+                    <div class="faq-a">DoH encrypts your DNS queries inside HTTPS so that your ISP or anyone on the network cannot see which domains you visit. Secure DNS Queries forwards all "safe" queries through DoH providers like Cloudflare, Google, or Quad9.</div>
                 </div>
 
                 <div class="help-category">Configuration</div>
@@ -58,7 +58,7 @@
 
                 <div class="faq-item" onclick="this.classList.toggle('open')">
                     <div class="faq-q">Where can I see blocked queries? <span class="icon">+</span></div>
-                    <div class="faq-a">The <a href="/threat_logs">Query Log</a> page shows every DNS query processed by SecureDNS Guard. You can filter by verdict (blocked/safe), attack type (DGA/tunneling), confidence level, and date range. Click "Explain" on any row to see the ML features.</div>
+                    <div class="faq-a">The <a href="/threat_logs">Query Log</a> page shows every DNS query processed by Secure DNS Queries. You can filter by verdict (blocked/safe), attack type (DGA/tunneling), confidence level, and date range. Click "Explain" on any row to see the ML features.</div>
                 </div>
 
                 <div class="help-category">API & Integration</div>

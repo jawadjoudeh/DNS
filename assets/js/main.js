@@ -109,7 +109,7 @@ function renderSidebar(isAdmin) {
             <svg viewBox="0 0 24 24" fill="none" stroke="#050f08" width="18" height="18" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
         </div>
         <div>
-            <div class="sidebar-title">SecureDNS</div>
+            <div class="sidebar-title">Secure DNS Queries</div>
             <div class="sidebar-subtitle">Guard</div>
         </div>
     </div>
@@ -302,7 +302,7 @@ function showSetupModal(apiKey, serverUrl) {
   <!-- DoH tab (hidden by default) -->
   <div id="_panel-doh" style="padding:1.25rem 1.5rem; display:none;">
     <p class="text-muted" style="font-size:.85rem; margin-bottom:1rem;">
-      Configure your browser to send all DNS queries through SecureDNS Guard — <strong>no extension required</strong>.
+      Configure your browser to send all DNS queries through Secure DNS Queries — <strong>no extension required</strong>.
       The server classifies every query and logs results to your dashboard.
     </p>
 

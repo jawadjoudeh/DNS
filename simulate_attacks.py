@@ -3,7 +3,7 @@ import time
 import json
 import requests
 
-# Host and port of the SecureDNS Guard server
+# Host and port of the Secure DNS Queries server
 SERVER_URL = "http://127.0.0.1:5000/api/classify"
 
 # Beautiful ASCII Color codes for printing
@@ -38,7 +38,7 @@ TEST_DOMAINS = [
 
 def run_simulation():
     print(f"\n{BOLD}{CYAN}===================================================================={RESET}")
-    print(f"{BOLD}{CYAN}            SecureDNS Guard – Security Attack Simulator             {RESET}")
+    print(f"{BOLD}{CYAN}            Secure DNS Queries – Security Attack Simulator             {RESET}")
     print(f"{BOLD}{CYAN}===================================================================={RESET}")
     print(f"Target Server API: {SERVER_URL}\n")
 
@@ -48,7 +48,7 @@ def run_simulation():
         resp = requests.get(diag_url, timeout=3)
         if resp.status_code == 200:
             diag_data = resp.json()
-            print(f"{GREEN}[+] Connected to SecureDNS Guard server!{RESET}")
+            print(f"{GREEN}[+] Connected to Secure DNS Queries server!{RESET}")
             print(f"    Server: {diag_data.get('server')}")
             print(f"    ML Model Loaded: {diag_data.get('model_loaded')}")
             print(f"    Authenticated Session: {diag_data.get('authenticated')}\n")
@@ -121,7 +121,7 @@ def run_simulation():
     print(f"{BOLD}{CYAN}===================================================================={RESET}")
 
     if accuracy >= 90.0:
-        print(f"\n{GREEN}{BOLD}[SUCCESS] SecureDNS Guard successfully identified and blocked simulated threats!{RESET}")
+        print(f"\n{GREEN}{BOLD}[SUCCESS] Secure DNS Queries successfully identified and blocked simulated threats!{RESET}")
         print(f"    - Benign domains were allowed instantly to guarantee seamless browsing.")
         print(f"    - DGA anomalies were stopped by the machine learning Isolation Forest.")
         print(f"    - DNS Tunneling data leaks were instantly blocked by deterministic heuristics.")

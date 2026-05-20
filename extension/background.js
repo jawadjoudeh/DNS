@@ -1,4 +1,4 @@
-/* SecureDNS Guard — MV3 service worker
+/* Secure DNS Queries — MV3 service worker
  *
  * Job: every time the user navigates to a new page, send the hostname to
  * the server's /api/dns/batch endpoint, store the classification result,
@@ -48,7 +48,7 @@ const SETTINGS_READY = new Promise(resolve => {
         if (!Array.isArray(STATS.lastResults)) STATS.lastResults = [];
       }
       if (Array.isArray(r.blocked)) BLOCKED = new Set(r.blocked);
-      console.log("[SecureDNS] ready — server:", SERVER, "key set:", !!API_KEY, "enabled:", ENABLED);
+      console.log("[Secure DNS Queries] ready — server:", SERVER, "key set:", !!API_KEY, "enabled:", ENABLED);
       _refreshBadge();
       resolve();
     }
@@ -153,15 +153,15 @@ async function _classify(host, tabId) {
     });
 
     if (res.status === 401) {
-      console.warn("[SecureDNS] 401 — invalid API key");
+      console.warn("[Secure DNS Queries] 401 — invalid API key");
       return;
     }
     if (res.status === 429) {
-      console.warn("[SecureDNS] 429 — rate limited, will retry on next nav");
+      console.warn("[Secure DNS Queries] 429 — rate limited, will retry on next nav");
       return;
     }
     if (!res.ok) {
-      console.warn("[SecureDNS]", ENDPOINT, "→", res.status);
+      console.warn("[Secure DNS Queries]", ENDPOINT, "→", res.status);
       return;
     }
 
@@ -176,7 +176,7 @@ async function _classify(host, tabId) {
       _blockTab(tabId, host, r.attack_type);
     }
   } catch (err) {
-    console.error("[SecureDNS] fetch error:", err.message);
+    console.error("[Secure DNS Queries] fetch error:", err.message);
   } finally {
     INFLIGHT.delete(host);
   }

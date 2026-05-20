@@ -370,9 +370,9 @@ def api_forgot_password():
         if smtp_server and smtp_user and smtp_pass:
             try:
                 reset_link = f"{request.host_url}reset-password?token={reset_token}"
-                msg = MIMEText(f"Hello {user['username']},\n\nYou requested a password reset for your SecureDNS Guard account. Please click the link below to reset your password:\n\n{reset_link}\n\nIf you did not request this, please ignore this email.")
-                msg['Subject'] = "Password Reset - SecureDNS Guard"
-                msg['From'] = f"SecureDNS Guard <{smtp_user}>"
+                msg = MIMEText(f"Hello {user['username']},\n\nYou requested a password reset for your Secure DNS Queries account. Please click the link below to reset your password:\n\n{reset_link}\n\nIf you did not request this, please ignore this email.")
+                msg['Subject'] = "Password Reset - Secure DNS Queries"
+                msg['From'] = f"Secure DNS Queries <{smtp_user}>"
                 msg['To'] = email
                 
                 server = smtplib.SMTP(smtp_server, int(smtp_port))
@@ -505,7 +505,7 @@ def api_diag():
     uid = get_request_user_id()
     resp = jsonify({
         "ok": True,
-        "server": "SecureDNS Guard",
+        "server": "Secure DNS Queries",
         "model_loaded": ml_engine.lexical_model is not None,
         "authenticated": uid is not None,
         "message": "Server is running. Add X-API-Key header to authenticate."
@@ -1172,7 +1172,7 @@ def dns_query_doh():
             "TC": False, "RD": True, "RA": True, "AD": False, "CD": False,
             "Question": [{"name": domain + ".", "type": 1}],
             "Authority": [],
-            "Comment": "Blocked by SecureDNS Guard ML classifier"
+            "Comment": "Blocked by Secure DNS Queries ML classifier"
         }), 200, {"Content-Type": "application/dns-json"}
 
     # Resolve safely via DoH
@@ -1233,7 +1233,7 @@ def download_extension():
     return Response(
         buf.read(),
         mimetype='application/zip',
-        headers={'Content-Disposition': 'attachment; filename=securednsgard-extension.zip'}
+        headers={'Content-Disposition': 'attachment; filename=Secure DNS Queriesgard-extension.zip'}
     )
 
 

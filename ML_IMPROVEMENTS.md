@@ -1,12 +1,12 @@
-# SecureDNS Guard: Machine Learning Architecture & Improvements Report
+# Secure DNS Queries: Machine Learning Architecture & Improvements Report
 
-This document provides a comprehensive technical overview of the machine learning advancements, architectural decisions, and optimization strategies implemented in the **SecureDNS Guard** system. 
+This document provides a comprehensive technical overview of the machine learning advancements, architectural decisions, and optimization strategies implemented in the **Secure DNS Queries** system. 
 
 ---
 
 ## Executive Summary
 
-SecureDNS Guard utilizes a dual-engine machine learning strategy to protect against modern DNS threats:
+Secure DNS Queries utilizes a dual-engine machine learning strategy to protect against modern DNS threats:
 1. **Lexical Domain Classifier:** Detects Domain Generation Algorithms (DGA) and malicious domains using textual features.
 2. **Network Flow Classifier:** Detects malicious DNS-over-HTTPS (DoH) traffic using statistical network flow characteristics.
 

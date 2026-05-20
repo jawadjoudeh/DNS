@@ -1,4 +1,4 @@
-/* popup.js — SecureDNS Guard
+/* popup.js — Secure DNS Queries
  *
  * Pulls state from the service worker, renders it, listens for live RESULT
  * messages and refreshes the UI. No demo/fake data anywhere.
