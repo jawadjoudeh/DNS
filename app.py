@@ -1041,7 +1041,7 @@ def admin_retrain():
 
 
 def _init_feedback_db():
-    conn = sqlite3.connect(auth.DNS_DB_PATH)
+    conn = sqlite3.connect(auth.DNS_DB_PATH, timeout=30.0)
     conn.execute('''CREATE TABLE IF NOT EXISTS feedback (
         id             INTEGER PRIMARY KEY AUTOINCREMENT,
         log_id         INTEGER,
@@ -1065,7 +1065,7 @@ def _maybe_auto_retrain():
     if ml_engine.TRAINING_STATUS["is_training"]:
         return
     try:
-        conn = sqlite3.connect(auth.DNS_DB_PATH)
+        conn = sqlite3.connect(auth.DNS_DB_PATH, timeout=30.0)
         total = conn.execute("SELECT COUNT(*) FROM feedback").fetchone()[0]
         conn.close()
         new_since = total - ml_engine._last_retrain_count
@@ -1112,7 +1112,7 @@ def feedback_log(log_id):
 def feedback_stats():
     if not get_request_user_id():
         return jsonify({"error": "Unauthorized"}), 401
-    conn = sqlite3.connect(auth.DNS_DB_PATH)
+    conn = sqlite3.connect(auth.DNS_DB_PATH, timeout=30.0)
     total = conn.execute("SELECT COUNT(*) FROM feedback").fetchone()[0]
     safe  = conn.execute("SELECT COUNT(*) FROM feedback WHERE correct_label='safe'").fetchone()[0]
     mal   = conn.execute("SELECT COUNT(*) FROM feedback WHERE correct_label='malicious'").fetchone()[0]

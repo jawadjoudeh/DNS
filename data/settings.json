@@ -1,0 +1,5 @@
+{
+  "threshold": 50,
+  "auto_retrain": true,
+  "doh_provider": "cloudflare"
+}

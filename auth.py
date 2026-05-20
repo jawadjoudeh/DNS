@@ -34,7 +34,7 @@ def _ensure_dirs():
 
 
 def get_db(path):
-    conn = sqlite3.connect(path)
+    conn = sqlite3.connect(path, timeout=30.0)
     conn.row_factory = sqlite3.Row
     return conn
 

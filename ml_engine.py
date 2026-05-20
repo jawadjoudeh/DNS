@@ -410,7 +410,7 @@ def _load_safe_feedback_domains():
     domains = []
     seen = set()
     try:
-        conn = sqlite3.connect(DNS_DB_PATH)
+        conn = sqlite3.connect(DNS_DB_PATH, timeout=30.0)
         try:
             rows = conn.execute(
                 "SELECT domain FROM feedback WHERE correct_label IN ('safe', 'benign')"
@@ -589,17 +589,8 @@ def train_async():
             X_ftr, X_fte = X_flow[tr2], X_flow[te2]
             y_ftr, y_fte = y_flow[tr2], y_flow[te2]
 
-            # ── SMOTE: oversample the minority class (Benign) to balance
-            #    the training set instead of relying only on class_weight ─
-            TRAINING_STATUS.update({"stage": "Balancing flow data (SMOTE)…", "progress": 72})
-            try:
-                from imblearn.over_sampling import SMOTE
-                smote = SMOTE(random_state=42)
-                X_ftr, y_ftr = smote.fit_resample(X_ftr, y_ftr)
-                logger.info("SMOTE applied — resampled train: Benign:%d  Malicious:%d",
-                            int((y_ftr == "Benign").sum()), int((y_ftr == "Malicious").sum()))
-            except ImportError:
-                logger.warning("imbalanced-learn not installed — falling back to class_weight only")
+            # SMOTE removed completely. Relying strictly on real benign data + balanced class weighting.
+            logger.info("No synthetic data used (SMOTE skipped). Relying on real L2 data and balanced weights.")
 
             TRAINING_STATUS.update({"stage": "Training flow classifier…", "progress": 78})
             clf_flow = RandomForestClassifier(
@@ -668,7 +659,7 @@ def train():
 def _reload_blacklist():
     global _blacklist_cache, _blacklist_last_load
     try:
-        conn = sqlite3.connect(DNS_DB_PATH)
+        conn = sqlite3.connect(DNS_DB_PATH, timeout=30.0)
         try:
             rows = conn.execute("SELECT domain FROM blacklist").fetchall()
         finally:
@@ -854,7 +845,7 @@ def start_auto_retrain():
         while True:
             time.sleep(_AUTO_RETRAIN_INTERVAL)
             try:
-                conn = sqlite3.connect(DNS_DB_PATH)
+                conn = sqlite3.connect(DNS_DB_PATH, timeout=30.0)
                 try:
                     count = conn.execute("SELECT COUNT(*) FROM feedback").fetchone()[0]
                 finally:
