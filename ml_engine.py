@@ -114,6 +114,10 @@ _blacklist_cache: set       = set()
 _blacklist_lock             = threading.Lock()
 _blacklist_last_load: float = 0.0
 
+_whitelist_cache: set       = set()
+_whitelist_lock             = threading.Lock()
+_whitelist_last_load: float = 0.0
+
 _last_retrain_count: int = 0
 
 _VALID_DOMAIN_RE = re.compile(
@@ -415,9 +419,15 @@ def _load_safe_feedback_domains():
             rows = conn.execute(
                 "SELECT domain FROM feedback WHERE correct_label IN ('safe', 'benign')"
             ).fetchall()
+            wl_rows = conn.execute("SELECT domain FROM whitelist").fetchall()
         finally:
             conn.close()
         for (domain,) in rows:
+            domain = _normalize_domain(domain or "")
+            if domain and _VALID_DOMAIN_RE.match(domain) and domain not in seen:
+                seen.add(domain)
+                domains.append(domain)
+        for (domain,) in wl_rows:
             domain = _normalize_domain(domain or "")
             if domain and _VALID_DOMAIN_RE.match(domain) and domain not in seen:
                 seen.add(domain)
@@ -685,6 +695,35 @@ def _blacklisted(domain):
         return False
 
 
+def _reload_whitelist():
+    global _whitelist_cache, _whitelist_last_load
+    try:
+        conn = sqlite3.connect(DNS_DB_PATH, timeout=30.0)
+        try:
+            rows = conn.execute("SELECT domain FROM whitelist").fetchall()
+        finally:
+            conn.close()
+        with _whitelist_lock:
+            _whitelist_cache = {r[0].lower().rstrip(".") for r in rows if r[0]}
+            _whitelist_last_load = time.time()
+    except Exception:
+        with _whitelist_lock:
+            _whitelist_last_load = time.time()
+
+
+def _whitelisted(domain):
+    if time.time() - _whitelist_last_load > _BLACKLIST_TTL:
+        _reload_whitelist()
+    parts = domain.split(".")
+    with _whitelist_lock:
+        if domain in _whitelist_cache:
+            return True
+        for i in range(1, len(parts) - 1):
+            if f"*.{'.'.join(parts[i:])}" in _whitelist_cache:
+                return True
+        return False
+
+
 # ---------------------------------------------------------------------------
 # Classification cache — bounded, TTL-based, thread-safe
 # ---------------------------------------------------------------------------
@@ -747,6 +786,13 @@ def classify(domain):
         return _make_result(False, None, 1.0, [0.0] * N_LEXICAL)
 
     domain = _normalize_domain(domain)
+
+    # Whitelist checked BEFORE everything else — newly allowed domains take effect immediately
+    if _whitelisted(domain):
+        features = extract_features(domain)
+        res = _make_result(False, None, 1.0, features)
+        _cache_set(domain, res)
+        return res
 
     # Blacklist checked BEFORE cache — newly blocked domains take effect immediately
     if _blacklisted(domain):

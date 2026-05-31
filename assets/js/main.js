@@ -224,7 +224,7 @@ function showSetupModal(apiKey, serverUrl) {
     overlay.id        = '_sdg-setup-modal';
     overlay.className = 'modal-overlay open';
     overlay.innerHTML = `
-<div class="modal-content" style="max-width:620px; padding:0; overflow:hidden;">
+<div class="modal-content" style="max-width:620px; padding:0; overflow:hidden; max-height:90vh; display:flex; flex-direction:column;">
 
   <!-- Header -->
   <div class="modal-header" style="padding:1.25rem 1.5rem; border-bottom:1px solid var(--border-color);">
@@ -257,93 +257,98 @@ function showSetupModal(apiKey, serverUrl) {
     <div style="font-size:.75rem; color:var(--text-secondary); margin-top:.4rem;">Keep this secret — it authenticates all API requests.</div>
   </div>
 
-  <!-- Extension tab -->
-  <div id="_panel-ext" style="padding:1.25rem 1.5rem;">
-    <div style="display:flex; flex-direction:column; gap:1.1rem;">
+  <!-- Scrollable Panel Body Wrapper -->
+  <div style="overflow-y:auto; flex:1; min-height:0;">
 
-      <div style="display:flex; gap:1rem;">
-        <div style="min-width:28px; height:28px; border-radius:50%; background:var(--accent-glow,rgba(16,185,129,.12)); color:var(--accent); font-weight:800; display:flex; align-items:center; justify-content:center; font-size:.85rem;">1</div>
-        <div>
-          <div style="font-weight:700; margin-bottom:.25rem;">Download the extension</div>
-          <a href="/download/extension.zip" class="btn" style="font-size:.82rem; padding:.4rem .9rem; display:inline-flex; align-items:center; gap:.4rem;">
-            ⬇ Download extension.zip
-          </a>
-          <div class="text-muted" style="font-size:.78rem; margin-top:.35rem;">Then unzip it to any folder on your computer.</div>
-        </div>
-      </div>
+    <!-- Extension tab -->
+    <div id="_panel-ext" style="padding:1.25rem 1.5rem;">
+      <div style="display:flex; flex-direction:column; gap:1.1rem;">
 
-      <div style="display:flex; gap:1rem;">
-        <div style="min-width:28px; height:28px; border-radius:50%; background:var(--accent-glow,rgba(16,185,129,.12)); color:var(--accent); font-weight:800; display:flex; align-items:center; justify-content:center; font-size:.85rem;">2</div>
-        <div>
-          <div style="font-weight:700; margin-bottom:.25rem;">Load it in Chrome</div>
-          <ol style="margin-left:1.1rem; color:var(--text-secondary); font-size:.83rem; line-height:1.8;">
-            <li>Open <code style="background:var(--bg-base);padding:.1rem .35rem;border-radius:3px;">chrome://extensions</code></li>
-            <li>Enable <strong>Developer mode</strong> (toggle top-right)</li>
-            <li>Click <strong>Load unpacked</strong> → select the unzipped folder</li>
-          </ol>
-        </div>
-      </div>
-
-      <div style="display:flex; gap:1rem;">
-        <div style="min-width:28px; height:28px; border-radius:50%; background:var(--accent-glow,rgba(16,185,129,.12)); color:var(--accent); font-weight:800; display:flex; align-items:center; justify-content:center; font-size:.85rem;">3</div>
-        <div>
-          <div style="font-weight:700; margin-bottom:.25rem;">Paste your API key</div>
-          <div class="text-muted" style="font-size:.83rem; line-height:1.7;">
-            Click the 🛡 extension icon → open <strong>Settings</strong> → paste your API key and set Server URL to
-            <code style="background:var(--bg-base);padding:.1rem .35rem;border-radius:3px;">${_h(serverUrl)}</code>
-            → click <strong>Save</strong>.
+        <div style="display:flex; gap:1rem;">
+          <div style="min-width:28px; height:28px; border-radius:50%; background:var(--accent-glow,rgba(16,185,129,.12)); color:var(--accent); font-weight:800; display:flex; align-items:center; justify-content:center; font-size:.85rem;">1</div>
+          <div>
+            <div style="font-weight:700; margin-bottom:.25rem;">Download the extension</div>
+            <a href="/download/extension.zip" class="btn" style="font-size:.82rem; padding:.4rem .9rem; display:inline-flex; align-items:center; gap:.4rem;">
+              ⬇ Download extension.zip
+            </a>
+            <div class="text-muted" style="font-size:.78rem; margin-top:.35rem;">Then unzip it to any folder on your computer.</div>
           </div>
         </div>
-      </div>
 
+        <div style="display:flex; gap:1rem;">
+          <div style="min-width:28px; height:28px; border-radius:50%; background:var(--accent-glow,rgba(16,185,129,.12)); color:var(--accent); font-weight:800; display:flex; align-items:center; justify-content:center; font-size:.85rem;">2</div>
+          <div>
+            <div style="font-weight:700; margin-bottom:.25rem;">Load it in Chrome</div>
+            <ol style="margin-left:1.1rem; color:var(--text-secondary); font-size:.83rem; line-height:1.8;">
+              <li>Open <code style="background:var(--bg-base);padding:.1rem .35rem;border-radius:3px;">chrome://extensions</code></li>
+              <li>Enable <strong>Developer mode</strong> (toggle top-right)</li>
+              <li>Click <strong>Load unpacked</strong> → select the unzipped folder</li>
+            </ol>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:1rem;">
+          <div style="min-width:28px; height:28px; border-radius:50%; background:var(--accent-glow,rgba(16,185,129,.12)); color:var(--accent); font-weight:800; display:flex; align-items:center; justify-content:center; font-size:.85rem;">3</div>
+          <div>
+            <div style="font-weight:700; margin-bottom:.25rem;">Paste your API key</div>
+            <div class="text-muted" style="font-size:.83rem; line-height:1.7;">
+              Click the 🛡 extension icon → open <strong>Settings</strong> → paste your API key and set Server URL to
+              <code style="background:var(--bg-base);padding:.1rem .35rem;border-radius:3px;">${_h(serverUrl)}</code>
+              → click <strong>Save</strong>.
+            </div>
+          </div>
+        </div>
+
+      </div>
     </div>
-  </div>
 
-  <!-- DoH tab (hidden by default) -->
-  <div id="_panel-doh" style="padding:1.25rem 1.5rem; display:none;">
-    <p class="text-muted" style="font-size:.85rem; margin-bottom:1rem;">
-      Configure your browser to send all DNS queries through Secure DNS Queries — <strong>no extension required</strong>.
-      The server classifies every query and logs results to your dashboard.
-    </p>
+    <!-- DoH tab (hidden by default) -->
+    <div id="_panel-doh" style="padding:1.25rem 1.5rem; display:none;">
+      <p class="text-muted" style="font-size:.85rem; margin-bottom:1rem;">
+        Configure your browser to send all DNS queries through Secure DNS Queries — <strong>no extension required</strong>.
+        The server classifies every query and logs results to your dashboard.
+      </p>
 
-    <div style="display:flex; flex-direction:column; gap:1rem;">
+      <div style="display:flex; flex-direction:column; gap:1rem;">
 
-      <!-- Chrome -->
-      <details style="border:1px solid var(--border-color); border-radius:8px; overflow:hidden;">
-        <summary style="padding:.75rem 1rem; background:var(--bg-base); cursor:pointer; font-weight:700; font-size:.85rem; list-style:none; display:flex; align-items:center; gap:.5rem;">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="16" height="16" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>
-          Chrome / Edge / Brave
-        </summary>
-        <div style="padding:.9rem 1rem; font-size:.83rem; color:var(--text-secondary); line-height:1.8;">
-          <ol style="margin-left:1.1rem;">
-            <li>Go to <code style="background:var(--bg-base);padding:.1rem .35rem;border-radius:3px;">Settings → Privacy and Security → Security</code></li>
-            <li>Scroll to <strong>"Use secure DNS"</strong> and set it to <strong>With: Custom</strong></li>
-            <li>Enter: <code style="background:var(--bg-base);padding:.1rem .35rem;border-radius:3px;">${_h(serverUrl)}/dns-query</code></li>
-          </ol>
-          <div style="margin-top:.6rem; padding:.6rem; background:rgba(234,179,8,.07); border:1px solid rgba(234,179,8,.2); border-radius:6px; font-size:.78rem; color:var(--text-secondary);">
-            ⚠ Chrome uses wire-format DoH. For full per-user tracking include your API key in the URL:
-            <code style="word-break:break-all;">${_h(serverUrl)}/dns-query?key=${_h(apiKey || 'YOUR_KEY')}</code>
-          </div>
-        </div>
-      </details>
-
-      <!-- Firefox -->
-      <details style="border:1px solid var(--border-color); border-radius:8px; overflow:hidden;">
-        <summary style="padding:.75rem 1rem; background:var(--bg-base); cursor:pointer; font-weight:700; font-size:.85rem; list-style:none; display:flex; align-items:center; gap:.5rem;">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="16" height="16" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
-          Firefox
-        </summary>
-        <div style="padding:.9rem 1rem; font-size:.83rem; color:var(--text-secondary); line-height:1.8;">
-          <ol style="margin-left:1.1rem;">
-            <li>Go to <code style="background:var(--bg-base);padding:.1rem .35rem;border-radius:3px;">Settings → Privacy &amp; Security → DNS over HTTPS</code></li>
-            <li>Choose <strong>Max Protection</strong> → Custom → enter:<br>
+        <!-- Chrome -->
+        <details style="border:1px solid var(--border-color); border-radius:8px; overflow:hidden;">
+          <summary style="padding:.75rem 1rem; background:var(--bg-base); cursor:pointer; font-weight:700; font-size:.85rem; list-style:none; display:flex; align-items:center; gap:.5rem;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="16" height="16" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>
+            Chrome / Edge / Brave
+          </summary>
+          <div style="padding:.9rem 1rem; font-size:.83rem; color:var(--text-secondary); line-height:1.8;">
+            <ol style="margin-left:1.1rem;">
+              <li>Go to <code style="background:var(--bg-base);padding:.1rem .35rem;border-radius:3px;">Settings → Privacy and Security → Security</code></li>
+              <li>Scroll to <strong>"Use secure DNS"</strong> and set it to <strong>With: Custom</strong></li>
+              <li>Enter: <code style="background:var(--bg-base);padding:.1rem .35rem;border-radius:3px;">${_h(serverUrl)}/dns-query</code></li>
+            </ol>
+            <div style="margin-top:.6rem; padding:.6rem; background:rgba(234,179,8,.07); border:1px solid rgba(234,179,8,.2); border-radius:6px; font-size:.78rem; color:var(--text-secondary);">
+              ⚠ Chrome uses wire-format DoH. For full per-user tracking include your API key in the URL:
               <code style="word-break:break-all;">${_h(serverUrl)}/dns-query?key=${_h(apiKey || 'YOUR_KEY')}</code>
-            </li>
-          </ol>
-        </div>
-      </details>
+            </div>
+          </div>
+        </details>
 
+        <!-- Firefox -->
+        <details style="border:1px solid var(--border-color); border-radius:8px; overflow:hidden;">
+          <summary style="padding:.75rem 1rem; background:var(--bg-base); cursor:pointer; font-weight:700; font-size:.85rem; list-style:none; display:flex; align-items:center; gap:.5rem;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="16" height="16" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+            Firefox
+          </summary>
+          <div style="padding:.9rem 1rem; font-size:.83rem; color:var(--text-secondary); line-height:1.8;">
+            <ol style="margin-left:1.1rem;">
+              <li>Go to <code style="background:var(--bg-base);padding:.1rem .35rem;border-radius:3px;">Settings → Privacy &amp; Security → DNS over HTTPS</code></li>
+              <li>Choose <strong>Max Protection</strong> → Custom → enter:<br>
+                <code style="word-break:break-all;">${_h(serverUrl)}/dns-query?key=${_h(apiKey || 'YOUR_KEY')}</code>
+              </li>
+            </ol>
+          </div>
+        </details>
+
+      </div>
     </div>
+
   </div>
 
   <!-- Footer -->

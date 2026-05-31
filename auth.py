@@ -109,6 +109,14 @@ def init_db():
             added_by TEXT
         )
     ''')
+    c2.execute('''
+        CREATE TABLE IF NOT EXISTS whitelist (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            domain TEXT UNIQUE NOT NULL,
+            added_at TEXT,
+            added_by TEXT
+        )
+    ''')
     conn2.commit()
     conn2.close()
 
@@ -184,9 +192,10 @@ def get_all_users():
     c.execute(f'''
         SELECT {_USER_COLS_U},
                COUNT(d.log_id) as total_queries,
-               SUM(CASE WHEN d.action_taken='Blocked' THEN 1 ELSE 0 END) as blocked_today
+               SUM(CASE WHEN DATE(d.timestamp) = DATE('now') THEN 1 ELSE 0 END) as queries_today,
+               SUM(CASE WHEN d.action_taken='Blocked' AND DATE(d.timestamp) = DATE('now') THEN 1 ELSE 0 END) as blocked_today
         FROM users u
-        LEFT JOIN dns_db.dns_logs d ON u.user_id = d.user_id AND DATE(d.timestamp) = DATE('now')
+        LEFT JOIN dns_db.dns_logs d ON u.user_id = d.user_id
         GROUP BY u.user_id
     ''')
     users = [dict(row) for row in c.fetchall()]

@@ -179,6 +179,14 @@ def _oauth_redirect_uri(provider):
     base = os.environ.get("SERVER_URL", request.host_url.strip('/'))
     return f"{base}/api/auth/{provider}/callback"
 
+@app.after_request
+def add_header(response):
+    if request.path.startswith('/admin'):
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '-1'
+    return response
+
 # ── Page routes ──
 @app.route('/')
 @app.route('/index.html')
@@ -228,17 +236,13 @@ def forgot_password_page():
 def dashboard():
     if not session.get("user_id"):
         return redirect('/login')
-    if not is_admin():
-        return redirect('/user_dashboard')
-    return redirect('/admin/dashboard')
+    return redirect('/user_dashboard')
 
 @app.route('/user_dashboard')
 @app.route('/user_dashboard.html')
 def user_dashboard():
     if not session.get("user_id"):
         return redirect('/login')
-    if is_admin():
-        return redirect('/admin/dashboard')
     return render_template('user_dashboard.html')
 
 @app.route('/logout')
@@ -544,7 +548,7 @@ def api_dns_batch():
         resp = jsonify({"error": "API key required. Add your key in extension Settings."})
         resp.headers['Access-Control-Allow-Origin'] = '*'
         return resp, 401
-    rl = _rate_limit_ip(60, 60)
+    rl = _rate_limit_ip(600, 60)
     if rl: return rl
     data       = request.json or {}
     domains_raw = data.get('domains', [])
@@ -836,8 +840,15 @@ def add_blacklist():
     conn = auth.get_db(auth.DNS_DB_PATH)
     c    = conn.cursor()
     try:
+        c.execute("DELETE FROM whitelist WHERE domain=?", (domain,))
         c.execute("INSERT INTO blacklist (domain, added_at) VALUES (?, ?)", (domain, datetime.utcnow().isoformat()))
         conn.commit()
+        with ml_engine._blacklist_lock:
+            ml_engine._blacklist_cache.add(domain.lower().rstrip("."))
+        with ml_engine._whitelist_lock:
+            ml_engine._whitelist_cache.discard(domain.lower().rstrip("."))
+        with ml_engine._cache_lock:
+            ml_engine._cache.clear()
     except Exception:
         pass
     conn.close()
@@ -852,6 +863,60 @@ def remove_blacklist():
     c.execute("DELETE FROM blacklist WHERE domain=?", (domain,))
     conn.commit()
     conn.close()
+    with ml_engine._blacklist_lock:
+        ml_engine._blacklist_cache.discard(domain.lower().rstrip("."))
+    with ml_engine._cache_lock:
+        ml_engine._cache.clear()
+    return jsonify({"success": True})
+
+
+# ── Whitelist ──
+@app.route('/api/whitelist')
+def get_whitelist():
+    if not is_admin() and not get_request_user_id():
+        return jsonify({"error": "Unauthorized"}), 401
+    conn = auth.get_db(auth.DNS_DB_PATH)
+    c    = conn.cursor()
+    c.execute("SELECT domain FROM whitelist")
+    domains = [dict(r) for r in c.fetchall()]
+    conn.close()
+    return jsonify(domains)
+
+@app.route('/api/whitelist/add', methods=['POST'])
+def add_whitelist():
+    if not _admin_ok(): return jsonify({"error": "Forbidden"}), 403
+    domain = _validate_domain((request.json or {}).get('domain'))
+    if not domain: return jsonify({"error": "Invalid domain"}), 400
+    conn = auth.get_db(auth.DNS_DB_PATH)
+    c    = conn.cursor()
+    try:
+        c.execute("DELETE FROM blacklist WHERE domain=?", (domain,))
+        c.execute("INSERT INTO whitelist (domain, added_at) VALUES (?, ?)", (domain, datetime.utcnow().isoformat()))
+        conn.commit()
+        with ml_engine._whitelist_lock:
+            ml_engine._whitelist_cache.add(domain.lower().rstrip("."))
+        with ml_engine._blacklist_lock:
+            ml_engine._blacklist_cache.discard(domain.lower().rstrip("."))
+        with ml_engine._cache_lock:
+            ml_engine._cache.clear()
+    except Exception:
+        pass
+    conn.close()
+    return jsonify({"success": True})
+
+@app.route('/api/whitelist/remove', methods=['DELETE'])
+def remove_whitelist():
+    if not _admin_ok(): return jsonify({"error": "Forbidden"}), 403
+    domain = (request.json or {}).get('domain', '').strip()
+    conn   = auth.get_db(auth.DNS_DB_PATH)
+    c      = conn.cursor()
+    c.execute("DELETE FROM whitelist WHERE domain=?", (domain,))
+    conn.commit()
+    conn.close()
+    with ml_engine._whitelist_lock:
+        ml_engine._whitelist_cache.discard(domain.lower().rstrip("."))
+    with ml_engine._cache_lock:
+        ml_engine._cache.clear()
     return jsonify({"success": True})
 
 
@@ -957,12 +1022,35 @@ def admin_get_users():
 def admin_all_logs():
     err = _admin_guard()
     if err: return err
+    try:
+        page  = max(1, int(request.args.get('page', 1)))
+        limit = min(max(1, int(request.args.get('limit', 50))), 200)
+    except ValueError:
+        page, limit = 1, 50
+    where_sql, params = build_logs_query(request.args)
+    offset = (page - 1) * limit
     conn = auth.get_db(auth.DNS_DB_PATH)
-    c    = conn.cursor()
-    c.execute("SELECT * FROM dns_logs ORDER BY log_id DESC LIMIT 1000")
+    c = conn.cursor()
+    c.execute(f"SELECT COUNT(*) FROM dns_logs WHERE {where_sql}", params)
+    total = c.fetchone()[0]
+    c.execute(f"SELECT * FROM dns_logs WHERE {where_sql} ORDER BY log_id DESC LIMIT ? OFFSET ?", params + [limit, offset])
     logs = [dict(r) for r in c.fetchall()]
     conn.close()
-    return jsonify(logs)
+
+    try:
+        users_conn = auth.get_db(auth.DB_PATH)
+        users = users_conn.execute("SELECT user_id, username FROM users").fetchall()
+        users_conn.close()
+        user_map = {u['user_id']: u['username'] for u in users}
+    except Exception:
+        user_map = {}
+
+    for log in logs:
+        log['username'] = user_map.get(log['user_id'], '—')
+
+    return jsonify({"logs": logs, "pagination": {"page": page, "limit": limit, "total": total,
+        "pages": (total + limit - 1) // limit if total > 0 else 1,
+        "has_next": (page * limit) < total, "has_prev": page > 1}})
 
 @app.route('/admin/api/update-plan', methods=['PATCH'])
 def admin_update_plan():
@@ -973,6 +1061,8 @@ def admin_update_plan():
     plan    = data.get('plan')
     if not user_id or not plan:
         return jsonify({"error": "user_id and plan are required"}), 400
+    if int(user_id) == 1:
+        return jsonify({"error": "Cannot change the plan of the primary super-admin"}), 400
     auth.update_user_plan(user_id, plan)
     return jsonify({"success": True})
 
@@ -985,6 +1075,8 @@ def admin_toggle_admin():
     is_admin_flag = data.get('is_admin')
     if user_id is None or is_admin_flag is None:
         return jsonify({"error": "user_id and is_admin are required"}), 400
+    if int(user_id) == 1:
+        return jsonify({"error": "Cannot change admin status of the primary super-admin"}), 400
     auth.toggle_admin(user_id, is_admin_flag)
     return jsonify({"success": True})
 
@@ -992,9 +1084,35 @@ def admin_toggle_admin():
 def admin_delete_user(user_id):
     err = _admin_guard()
     if err: return err
+    if user_id == 1:
+        return jsonify({"error": "Cannot delete the primary super-admin"}), 400
     auth.delete_user(user_id)
     return jsonify({"success": True})
 
+
+@app.route('/admin/api/create-user', methods=['POST'])
+def admin_create_user():
+    err = _admin_guard()
+    if err: return err
+    data = request.json or {}
+    email = data.get('email', '')
+    username = data.get('username', '')
+    name = data.get('name', 'New User')
+    password = data.get('password', '')
+    plan = data.get('plan', 'free')
+    is_admin_flag = int(bool(data.get('is_admin', False)))
+    import re
+    pw_pattern = r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]{8,}$"
+    if not password or not re.match(pw_pattern, password):
+        return jsonify({"success": False, "error": "Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character (@$!%*?&#)."}), 400
+        
+    res = auth.register_user(email, username, name, password, plan)
+    if res.get('success'):
+        # If is_admin is requested, update it
+        if is_admin_flag:
+            auth.toggle_admin(res['user_id'], True)
+        return jsonify({"success": True, "message": "User created successfully"})
+    return jsonify(res), 400
 
 @app.route('/admin/api/clear-logs', methods=['POST'])
 def admin_clear_logs():
@@ -1098,12 +1216,61 @@ def feedback_log(log_id):
         return jsonify({"error": "Not found"}), 404
     domain = row['domain_name']
     now    = datetime.utcnow().isoformat()
+    
+    # Update this log's user label
     c.execute("UPDATE dns_logs SET user_label=? WHERE log_id=?", (label, log_id))
+    
+    if label == 'safe':
+        # Whitelist the domain!
+        # Delete from blacklist if present
+        c.execute("DELETE FROM blacklist WHERE domain=?", (domain,))
+        # Insert into whitelist
+        try:
+            c.execute("INSERT OR REPLACE INTO whitelist (domain, added_at, added_by) VALUES (?, ?, ?)", 
+                      (domain, now, 'Admin' if admin else f'User {uid}'))
+        except Exception:
+            pass
+        # Update all logs for this domain to 'Allowed'
+        c.execute("UPDATE dns_logs SET action_taken='Allowed', prediction='Safe', attack_type=NULL WHERE domain_name=?", (domain,))
+        
+        # Clear ML caches so it takes effect immediately!
+        with ml_engine._whitelist_lock:
+            ml_engine._whitelist_cache.add(domain.lower().rstrip("."))
+        with ml_engine._blacklist_lock:
+            ml_engine._blacklist_cache.discard(domain.lower().rstrip("."))
+            
+    elif label in ('malicious', 'tunneling'):
+        # Blacklist the domain!
+        # Delete from whitelist if present
+        c.execute("DELETE FROM whitelist WHERE domain=?", (domain,))
+        # Insert into blacklist
+        try:
+            c.execute("INSERT OR REPLACE INTO blacklist (domain, added_at, added_by) VALUES (?, ?, ?)", 
+                      (domain, now, 'Admin' if admin else f'User {uid}'))
+        except Exception:
+            pass
+        # Update all logs for this domain to 'Blocked'
+        c.execute("UPDATE dns_logs SET action_taken='Blocked', prediction='Malicious', attack_type=? WHERE domain_name=?", 
+                  ("DGA" if label == 'malicious' else "Tunneling", domain))
+        
+        # Clear ML caches so it takes effect immediately!
+        with ml_engine._blacklist_lock:
+            ml_engine._blacklist_cache.add(domain.lower().rstrip("."))
+        with ml_engine._whitelist_lock:
+            ml_engine._whitelist_cache.discard(domain.lower().rstrip("."))
+            
+    # Also record in feedback table for ML retrain
     c.execute("DELETE FROM feedback WHERE log_id=?", (log_id,))
     c.execute("INSERT INTO feedback (log_id, domain, correct_label, submitted_by, submitted_at) VALUES (?,?,?,?,?)",
               (log_id, domain, label, uid, now))
+    
     conn.commit()
     conn.close()
+    
+    # Clear the classification cache in ml_engine
+    with ml_engine._cache_lock:
+        ml_engine._cache.clear()
+        
     _maybe_auto_retrain()
     return jsonify({"success": True, "label": label, "domain": domain})
 
@@ -1121,14 +1288,133 @@ def feedback_stats():
     return jsonify({"total": total, "safe": safe, "malicious": mal, "next_retrain_in": next_retrain})
 
 
-# ── DNS-over-HTTPS JSON endpoint (RFC 8484 JSON format) ──────────────
-# Compatible with Firefox TRR and DoH clients that support JSON mode.
-# URL: /dns-query?name=<domain>&type=A[&key=<api-key>]
-# Classifies the domain, blocks malicious ones (NXDOMAIN), and resolves
-# safe ones via the upstream DoH client.
+# ── DNS Binary Wire Format Helpers (RFC 8484) ──
+def _parse_dns_question(data):
+    try:
+        if len(data) < 12:
+            return None, None
+        idx = 12
+        parts = []
+        while idx < len(data):
+            length = data[idx]
+            if length == 0:
+                idx += 1
+                break
+            parts.append(data[idx+1:idx+1+length].decode('utf-8', errors='ignore'))
+            idx += 1 + length
+        domain = ".".join(parts)
+        if idx + 4 > len(data):
+            return None, None
+        return domain, data[:idx+4]
+    except Exception:
+        return None, None
+
+def _build_nxdomain_response(query_data, question_section):
+    transaction_id = query_data[:2]
+    flags = b'\x81\x83'  # NXDOMAIN response flags
+    qdcount = b'\x00\x01'
+    ancount = b'\x00\x00'
+    nscount = b'\x00\x00'
+    arcount = b'\x00\x00'
+    header = transaction_id + flags + qdcount + ancount + nscount + arcount
+    return header + question_section[12:]
+
+def _build_a_response(query_data, question_section, ip_str):
+    transaction_id = query_data[:2]
+    flags = b'\x81\x80'  # NOERROR response flags
+    qdcount = b'\x00\x01'
+    ancount = b'\x00\x01'
+    nscount = b'\x00\x00'
+    arcount = b'\x00\x00'
+    header = transaction_id + flags + qdcount + ancount + nscount + arcount
+    
+    name_pointer = b'\xc0\x0c'
+    type_a = b'\x00\x01'
+    class_in = b'\x00\x01'
+    ttl = b'\x00\x00\x01\x2c'  # TTL = 300
+    rdlength = b'\x00\x04'     # 4 bytes for IPv4 address
+    try:
+        rdata = bytes(int(x) for x in ip_str.split('.'))
+    except Exception:
+        rdata = b'\x00\x00\x00\x00'
+    answer = name_pointer + type_a + class_in + ttl + rdlength + rdata
+    return header + question_section[12:] + answer
+
+# ── DNS-over-HTTPS endpoint (RFC 8484 Hybrid Format) ──────────────
+# Supports BOTH binary RFC 8484 application/dns-message (Chrome, Edge, Brave, Firefox Custom secure DNS)
+# AND standard DNS JSON fallback queries.
 @app.route('/dns-query', methods=['GET', 'POST'])
 def dns_query_doh():
-    # Extract domain from query params (JSON DoH uses ?name=)
+    # 1. Detect if request is Binary DoH (RFC 8484)
+    is_binary = False
+    query_data = None
+    
+    if request.method == 'POST' and request.headers.get('Content-Type') == 'application/dns-message':
+        is_binary = True
+        query_data = request.data
+    elif request.args.get('dns'):
+        is_binary = True
+        import base64
+        dns_b64 = request.args.get('dns', '')
+        # Add base64 padding if needed
+        dns_b64 += '=' * (-len(dns_b64) % 4)
+        try:
+            query_data = base64.urlsafe_b64decode(dns_b64)
+        except Exception:
+            query_data = None
+
+    if is_binary:
+        if not query_data or len(query_data) < 12:
+            return "Invalid binary DNS query", 400
+            
+        domain, question = _parse_dns_question(query_data)
+        if not domain or not question:
+            return "Malformed DNS query structure", 400
+            
+        # Authenticate via key param or X-API-Key header
+        api_key = request.args.get('key') or request.headers.get('X-API-Key')
+        uid = None
+        if api_key:
+            conn = auth.get_db(auth.DB_PATH)
+            row = conn.execute('SELECT user_id FROM api_keys WHERE key_value = ?', (api_key,)).fetchone()
+            conn.close()
+            uid = row['user_id'] if row else None
+            
+        res = ml_engine.classify(domain)
+        is_blocked = bool(res.get('blocked'))
+        
+        # Log query
+        try:
+            conn = auth.get_db(auth.DNS_DB_PATH)
+            conn.execute(
+                '''INSERT INTO dns_logs (timestamp, source_ip, domain_name, prediction, attack_type,
+                   action_taken, confidence, entropy, domain_length, subdomain_count, doh_used, doh_provider, user_id)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 'DoH-Binary', ?)''',
+                (datetime.utcnow().isoformat(), request.remote_addr, domain,
+                 res.get('prediction'), res.get('attack_type'), res.get('action'),
+                 res.get('confidence'), res['features'][3], res['features'][0], res['features'][1], uid)
+            )
+            conn.commit()
+            conn.close()
+        except Exception:
+            pass
+            
+        if is_blocked:
+            resp_data = _build_nxdomain_response(query_data, question)
+            return resp_data, 200, {"Content-Type": "application/dns-message"}
+            
+        # Resolve via upstream DoH resolver
+        doh_res = doh_resolver.resolve(domain, preferred=load_settings().get('doh_provider', 'cloudflare'))
+        ip = doh_res.get('ip')
+        
+        if ip:
+            resp_data = _build_a_response(query_data, question, ip)
+        else:
+            resp_data = _build_nxdomain_response(query_data, question)
+            
+        return resp_data, 200, {"Content-Type": "application/dns-message"}
+
+    # 2. Fallback to standard JSON DoH API
     name = request.args.get('name', '').strip().rstrip('.')
     if not name:
         return jsonify({"Status": 2, "Comment": "missing name"}), 400
@@ -1137,7 +1423,6 @@ def dns_query_doh():
     if not domain:
         return jsonify({"Status": 2, "Comment": "invalid name"}), 400
 
-    # Authenticate via ?key= query param or X-API-Key header
     api_key = request.args.get('key') or request.headers.get('X-API-Key')
     uid = None
     if api_key:
@@ -1149,7 +1434,6 @@ def dns_query_doh():
     res = ml_engine.classify(domain)
     is_blocked = bool(res.get('blocked'))
 
-    # Log the query
     try:
         conn = auth.get_db(auth.DNS_DB_PATH)
         conn.execute(
@@ -1166,22 +1450,20 @@ def dns_query_doh():
         pass
 
     if is_blocked:
-        # Return NXDOMAIN so the browser treats the domain as non-existent
         return jsonify({
-            "Status": 3,  # NXDOMAIN
+            "Status": 3,
             "TC": False, "RD": True, "RA": True, "AD": False, "CD": False,
             "Question": [{"name": domain + ".", "type": 1}],
             "Authority": [],
             "Comment": "Blocked by Secure DNS Queries ML classifier"
         }), 200, {"Content-Type": "application/dns-json"}
 
-    # Resolve safely via DoH
     doh_res = doh_resolver.resolve(domain, preferred=load_settings().get('doh_provider', 'cloudflare'))
     ip = doh_res.get('ip')
     answers = [{"name": domain + ".", "type": 1, "TTL": 300, "data": ip}] if ip else []
 
     return jsonify({
-        "Status": 0,  # NOERROR
+        "Status": 0,
         "TC": False, "RD": True, "RA": True, "AD": False, "CD": False,
         "Question": [{"name": domain + ".", "type": 1}],
         "Answer": answers,
@@ -1235,6 +1517,163 @@ def download_extension():
         mimetype='application/zip',
         headers={'Content-Disposition': 'attachment; filename=Secure DNS Queriesgard-extension.zip'}
     )
+
+
+# ── DNS Proxy download — generates dns_proxy.py on the fly with pre-configured API Key ──
+@app.route('/download/dns_proxy.py')
+def download_dns_proxy():
+    uid = get_request_user_id()
+    if not uid:
+        return redirect('/login?next=/download/dns_proxy.py')
+
+    # Fetch the user's first API key
+    conn = auth.get_db(auth.DB_PATH)
+    key_row = conn.execute(
+        'SELECT key_value FROM api_keys WHERE user_id = ? ORDER BY key_id ASC LIMIT 1',
+        (uid,)
+    ).fetchone()
+    conn.close()
+    
+    api_key = key_row['key_value'] if key_row else "YOUR_API_KEY_HERE"
+    server_url = os.environ.get("SERVER_URL", request.host_url.strip('/'))
+
+    proxy_code = f"""import socket
+import sys
+import urllib.request
+import urllib.parse
+import json
+
+# Pre-configured configurations
+API_KEY = "{api_key}"
+SERVER_URL = "{server_url}"
+BIND_IP = "127.0.0.1"
+BIND_PORT = 53
+
+def parse_dns_question(data):
+    if len(data) < 12:
+        return None, None
+    idx = 12
+    parts = []
+    while idx < len(data):
+        length = data[idx]
+        if length == 0:
+            idx += 1
+            break
+        parts.append(data[idx+1:idx+1+length].decode('utf-8', errors='ignore'))
+        idx += 1 + length
+    domain = ".".join(parts)
+    return domain, data[:idx+4]
+
+def build_nxdomain_response(query_data, question_section):
+    transaction_id = query_data[:2]
+    flags = b'\\x81\\x83'  # NXDOMAIN
+    qdcount = b'\\x00\\x01'
+    ancount = b'\\x00\\x00'
+    nscount = b'\\x00\\x00'
+    arcount = b'\\x00\\x00'
+    header = transaction_id + flags + qdcount + ancount + nscount + arcount
+    return header + question_section[12:]
+
+def build_a_response(query_data, question_section, ip_str):
+    transaction_id = query_data[:2]
+    flags = b'\\x81\\x80'  # NOERROR
+    qdcount = b'\\x00\\x01'
+    ancount = b'\\x00\\x01'
+    nscount = b'\\x00\\x00'
+    arcount = b'\\x00\\x00'
+    header = transaction_id + flags + qdcount + ancount + nscount + arcount
+    
+    name_pointer = b'\\xc0\\x0c'
+    type_a = b'\\x00\\x01'
+    class_in = b'\\x00\\x01'
+    ttl = b'\\x00\\x00\\x01\\x2c'
+    rdlength = b'\\x00\\x04'
+    try:
+        rdata = bytes(int(x) for x in ip_str.split('.'))
+    except Exception:
+        rdata = b'\\x00\\x00\\x00\\x00'
+    answer = name_pointer + type_a + class_in + ttl + rdlength + rdata
+    return header + question_section[12:] + answer
+
+def check_domain_api(domain):
+    url = f"{{SERVER_URL}}/api/proxy/query"
+    headers = {{
+        "Content-Type": "application/json",
+        "X-API-Key": API_KEY
+    }}
+    data = json.dumps({{"domain": domain}}).encode('utf-8')
+    req = urllib.request.Request(url, data=data, headers=headers, method='POST')
+    try:
+        with urllib.request.urlopen(req, timeout=3.0) as response:
+            res = json.loads(response.read().decode('utf-8'))
+            return res
+    except Exception as e:
+        print(f"API Request failed: {{e}}")
+        return None
+
+def start_proxy():
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        sock.bind((BIND_IP, BIND_PORT))
+        print(f"Intelligent DNS Proxy is listening on {{BIND_IP}}:{{BIND_PORT}}...")
+    except PermissionError:
+        print(f"ERROR: Permission denied. Please run as Administrator / root to bind to port {{BIND_PORT}}.")
+        sys.exit(1)
+    except Exception as e:
+        print(f"ERROR: Failed to bind to {{BIND_IP}}:{{BIND_PORT}}: {{e}}")
+        sys.exit(1)
+        
+    while True:
+        try:
+            data, addr = sock.recvfrom(512)
+            if len(data) < 12:
+                continue
+            
+            domain, question = parse_dns_question(data)
+            if not domain:
+                continue
+                
+            print(f"Received query for: {{domain}}")
+            
+            res = check_domain_api(domain)
+            if res is None:
+                print("Fail-safe: API is down. Preserving connectivity (passing through to 8.8.8.8).")
+                try:
+                    upstream = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                    upstream.sendto(data, ("8.8.8.8", 53))
+                    resp, _ = upstream.recvfrom(512)
+                    sock.sendto(resp, addr)
+                except Exception as ex:
+                    print(f"Upstream resolution failed: {{ex}}")
+                continue
+            
+            if res.get('blocked'):
+                print(f"[BLOCKED] Malicious domain detected by ML: {{domain}} ({{res.get('attack_type', 'DGA')}})")
+                response_data = build_nxdomain_response(data, question)
+            else:
+                ip = res.get('resolved_ip')
+                if ip:
+                    print(f"[ALLOWED] Resolved via DoH: {{domain}} -> {{ip}} ({{res.get('doh_provider', 'Cloudflare')}})")
+                    response_data = build_a_response(data, question, ip)
+                else:
+                    response_data = build_nxdomain_response(data, question)
+            
+            sock.sendto(response_data, addr)
+        except KeyboardInterrupt:
+            print("\\nShutting down DNS proxy.")
+            break
+        except Exception as e:
+            print(f"Error handling query: {{e}}")
+
+if __name__ == '__main__':
+    start_proxy()
+"""
+    return Response(
+        proxy_code,
+        mimetype='text/x-python',
+        headers={'Content-Disposition': 'attachment; filename=dns_proxy.py'}
+    )
+
 
 
 if __name__ == "__main__":

@@ -34,6 +34,7 @@ let ENABLED = true;
 let STATS   = { total: 0, blocked: 0, safe: 0, lastResults: [] };
 let BLOCKED = new Set();
 let INFLIGHT = new Set();   // prevent duplicate parallel checks of the same host
+let BYPASSED = new Set();
 
 /* ── One-shot promise that resolves once storage is loaded ────────────── */
 const SETTINGS_READY = new Promise(resolve => {
@@ -139,6 +140,8 @@ async function _classify(host, tabId) {
   if (!ENABLED || !API_KEY || !host) return;
   if (INFLIGHT.has(host)) return;
 
+  if (BYPASSED.has(host)) return;
+
   if (BLOCKED.has(host)) {
     _blockTab(tabId, host, "Previously blocked");
     return;
@@ -197,7 +200,7 @@ chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
   const host = _hostnameFromUrl(details.url);
   if (!host) return;
   await SETTINGS_READY;
-  if (BLOCKED.has(host)) {
+  if (BLOCKED.has(host) && !BYPASSED.has(host)) {
     _blockTab(details.tabId, host, "Previously blocked");
   }
 });
@@ -260,6 +263,14 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
         await _classify(host, -1);
         sendResponse({ ok: true });
       })();
+      return true;
+
+    case "BYPASS_DOMAIN":
+      if (typeof msg.domain === "string") {
+        const d = msg.domain.toLowerCase().trim().replace(/\.$/, "");
+        BYPASSED.add(d);
+      }
+      sendResponse({ ok: true });
       return true;
   }
 });
